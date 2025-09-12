@@ -351,9 +351,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 	}
 	must(db.Store(ms.app.GetConfig().TotpTable, totp))
 
-	newKey, err := NewApiKey("email@example.com")
-	must(err)
-	must(newKey.Activate())
+	newKey := newTestKey()
 	must(db.Store(config.ApiKeyTable, newKey))
 
 	tests := []struct {
@@ -531,9 +529,7 @@ func (ms *MfaSuite) TestReEncryptWebAuthnUsers() {
 	baseConfigs := getDBConfig(ms)
 	users := getTestWebauthnUsers(ms, baseConfigs)
 
-	newKey, err := NewApiKey("email@example.com")
-	must(err)
-	must(newKey.Activate())
+	newKey := newTestKey()
 	must(ms.app.GetDB().Store(ms.app.GetConfig().ApiKeyTable, newKey))
 
 	complete, incomplete, err := newKey.ReEncryptWebAuthnUsers(storage, users[0].ApiKey)
@@ -577,9 +573,7 @@ func (ms *MfaSuite) TestReEncryptWebAuthnUser() {
 	}
 	for _, tt := range tests {
 		ms.Run(tt.name, func() {
-			newKey, err := NewApiKey("email@example.com")
-			must(err)
-			must(newKey.Activate())
+			newKey := newTestKey()
 			must(ms.app.GetDB().Store(ms.app.GetConfig().ApiKeyTable, newKey))
 			ms.NotEqual(newKey.Secret, tt.user.ApiKey.Secret)
 
@@ -672,4 +666,11 @@ func (ms *MfaSuite) TestApiKeyReEncryptLegacy() {
 	after, err := newKey.DecryptLegacy(newCiphertext)
 	ms.NoError(err)
 	ms.Equal(plaintext, after)
+}
+
+func newTestKey() ApiKey {
+	apiKey, err := NewApiKey("user@example.com")
+	must(err)
+	must(apiKey.Activate())
+	return apiKey
 }

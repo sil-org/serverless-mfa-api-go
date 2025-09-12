@@ -50,7 +50,7 @@ func AuthenticateRequest(r *http.Request) (User, error) {
 		return authWebauthnUser(r, localStorage, apiKey)
 
 	case "totp":
-		return nil, fmt.Errorf("TOTP is not yet supported")
+		return authTOTP(apiKey)
 
 	case "api-key":
 		return nil, nil // no authentication required for api-key
