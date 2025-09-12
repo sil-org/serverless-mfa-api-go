@@ -190,9 +190,11 @@ func (ms *MfaSuite) TestApiKeyActivate() {
 			}
 
 			ms.NoError(err)
-			ms.Regexp(regexp.MustCompile("[A-Za-z0-9+/]{43}="), key.Secret)
-			ms.NoError(bcrypt.CompareHashAndPassword([]byte(key.HashedSecret), []byte(key.Secret)))
-			ms.WithinDuration(time.Now(), time.Unix(int64(key.ActivatedAt/1000), 0), time.Minute)
+			ms.Regexp(regexp.MustCompile("^[A-Za-z0-9+/]{43}=$"), key.Secret, "Secret isn't correct")
+			ms.NoError(bcrypt.CompareHashAndPassword([]byte(key.HashedSecret), []byte(key.Secret)),
+				"HashedSecret isn't correct")
+			ms.WithinDuration(time.Now(), time.Unix(int64(key.ActivatedAt/1000), 0), time.Minute,
+				"ActivatedAt isn't set to the current time")
 
 			// ensure no other fields were changed
 			ms.Equal(tt.key.Key, key.Key)
@@ -446,7 +448,10 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 func (ms *MfaSuite) TestNewApiKey() {
 	got, err := NewApiKey(exampleEmail)
 	ms.NoError(err)
-	ms.Regexp(regexp.MustCompile("[a-f0-9]{40}"), got)
+	ms.Equal(exampleEmail, got.Email, "Email isn't correct")
+	ms.Regexp(regexp.MustCompile("^[a-f0-9]{40}$"), got.Key, "Key isn't correct")
+	ms.WithinDuration(time.Now(), time.Unix(int64(got.CreatedAt)/1000, 0), time.Minute,
+		"CreatedAt isn't set to the current time")
 }
 
 func (ms *MfaSuite) TestNewCipherBlock() {
