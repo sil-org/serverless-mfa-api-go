@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -171,10 +170,9 @@ func (a *App) DeleteCredential(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	params := mux.Vars(r)
-	credID, ok := params[IDParam]
-	if !ok || credID == "" {
-		err := fmt.Errorf("%s path parameter not provided to DeleteCredential", IDParam)
+	credID := r.PathValue(IDParam)
+	if credID == "" {
+		err := fmt.Errorf("%s path parameter not provided to DeleteCredential, path: %s", IDParam, r.URL.Path)
 		jsonResponse(w, err, http.StatusBadRequest)
 		log.Printf("%s\n", err)
 		return
