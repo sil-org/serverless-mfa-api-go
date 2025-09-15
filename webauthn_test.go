@@ -746,10 +746,10 @@ func Test_GetPublicKeyAsBytes(t *testing.T) {
 
 func Router(app *App) http.Handler {
 	mux := &http.ServeMux{}
-	mux.HandleFunc(fmt.Sprintf("/webauthn/credential/{%s}", IDParam), app.DeleteCredential)
+	mux.HandleFunc(fmt.Sprintf("DELETE /webauthn/credential/{%s}", IDParam), app.DeleteCredential)
 	// Ensure a request without an id gets handled properly
-	mux.HandleFunc("/webauthn/credential/", app.DeleteCredential)
-	mux.HandleFunc("/webauthn/credential", app.DeleteCredential)
+	mux.HandleFunc("DELETE /webauthn/credential/", app.DeleteCredential)
+	mux.HandleFunc("DELETE /webauthn/credential", app.DeleteCredential)
 
 	return testAuthnMiddleware(mux)
 }
