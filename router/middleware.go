@@ -2,7 +2,7 @@ package router
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -21,7 +21,8 @@ func authenticationMiddleware(next http.Handler) http.Handler {
 
 		user, err := mfa.AuthenticateRequest(r)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("unable to authenticate request: %s", err), http.StatusUnauthorized)
+			log.Printf("unable to authenticate request: %s", err)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
