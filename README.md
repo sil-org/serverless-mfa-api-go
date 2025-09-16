@@ -1,18 +1,56 @@
-# A Serverless MFA API with support for WebAuthn
+# A Serverless MFA API with support for TOTP and WebAuthn
 
-This project provides a semi-generic backend API for supporting WebAuthn credential registration and authentication.
-It is intended to be run in a manner as to be shared between multiple consuming applications. It uses an API key 
-and secret to authenticate requests, and further uses that secret as the encryption key. Loss of the API secret 
-would mean loss of all WebAuthn credentials stored.
+This project provides a semi-generic backend API for supporting Time-based One Time Passcode (TOTP) and WebAuthn 
+Passkey registration and authentication. It is intended to be run in a manner as to be shared between multiple consuming
+applications. It uses an API key and secret to authenticate requests, and further uses that secret as the encryption 
+key. Loss of the API secret would mean loss of all credentials stored.
 
 This application can be run in two ways:
 1. As a standalone server using the builtin webserver available in the `server/` folder
-2. As a AWS Lambda function using the `lambda/` implementation. This implementation can also use 
+2. As an AWS Lambda function using the `lambda/` implementation. This implementation can also use 
 [AWS CDK](https://aws.amazon.com/cdk/) to help automate build/deployment. It should also be 
 noted that the `lambda` format depends on some resources already existing in AWS. There is a `lambda/terraform/`
 folder with the Terraform configurations needed to provision them. 
 
-## The API
+# API definition
+
+The full definition of the API is found in the openapi.yaml file. A brief summary follows.
+
+## The APIKey API
+
+### Create APIKey
+
+`POST /api-key`
+
+### Activate APIKey
+
+`POST /api-key/activate`
+
+### Rotate APIKey (experimental)
+
+This endpoint has not yet been proven in production use. Proceed at your own risk.
+
+`POST /api-key/rotate`
+
+## The TOTP API
+
+### Required Headers
+1. `x-mfa-apikey` - The API Key
+2. `x-mfa-apisecret` - The API Key Secret
+
+### Create TOTP Passcode
+
+`POST /totp`
+
+### Delete TOTP Passcode
+
+`DELETE /totp/{uuid}`
+
+### Validate TOTP Passcode
+
+`POST /totp/{uuid}/validate`
+
+## The Webauthn API
 Yes, as you'll see below this API makes heavy use of custom headers for things that seem like they could go into 
 the request body. We chose to use headers though so that what is sent in the body can be handed off directly
 to the WebAuthn library and fit the structures it was expecting without causing any conflicts, etc.
