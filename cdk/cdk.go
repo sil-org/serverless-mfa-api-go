@@ -108,9 +108,7 @@ func main() {
 
 	region := os.Getenv("AWS_REGION")
 	if region != "" {
-		props.Env = &awscdk.Environment{
-			Region: jsii.String(os.Getenv("AWS_REGION")),
-		}
+		props.Env = &awscdk.Environment{Region: &region}
 	}
 
 	NewCdkStack(app, "twosv-api-"+env, &CdkStackProps{props})
