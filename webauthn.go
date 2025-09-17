@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -129,7 +128,12 @@ func (a *App) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	credential, err := user.FinishLogin(r)
 	if err != nil {
 		jsonResponse(w, err, http.StatusBadRequest)
-		log.Printf("error finishing user login	: %s\n", err)
+
+		// SonarQube flagged this as vulnerable to injection attacks. Rather than exhaustively search for places
+		// where user input is inserted into the error message, I'll just sanitize it as recommended.
+		sanitizedError := strings.ReplaceAll(strings.ReplaceAll(err.Error(), "\n", "_"), "\r", "_")
+		log.Printf("error finishing user login: %s\n", sanitizedError)
+
 		return
 	}
 
@@ -171,10 +175,9 @@ func (a *App) DeleteCredential(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	params := mux.Vars(r)
-	credID, ok := params[IDParam]
-	if !ok || credID == "" {
-		err := fmt.Errorf("%s path parameter not provided to DeleteCredential", IDParam)
+	credID := r.PathValue(IDParam)
+	if credID == "" {
+		err := fmt.Errorf("%s path parameter not provided to DeleteCredential, path: %s", IDParam, r.URL.Path)
 		jsonResponse(w, err, http.StatusBadRequest)
 		log.Printf("%s\n", err)
 		return

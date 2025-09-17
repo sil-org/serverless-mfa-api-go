@@ -17,7 +17,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 
 	u2fsim "github.com/silinternational/serverless-mfa-api-go/u2fsimulator"
@@ -745,18 +744,14 @@ func Test_GetPublicKeyAsBytes(t *testing.T) {
 	assert.Equal(want, got, "incorrect public Key")
 }
 
-func Router(app *App) *mux.Router {
-	router := mux.NewRouter()
-	router.HandleFunc(fmt.Sprintf("/webauthn/credential/{%s}", IDParam), app.DeleteCredential).Methods("DELETE")
+func Router(app *App) http.Handler {
+	mux := &http.ServeMux{}
+	mux.HandleFunc(fmt.Sprintf("DELETE /webauthn/credential/{%s}", IDParam), app.DeleteCredential)
 	// Ensure a request without an id gets handled properly
-	router.HandleFunc("/webauthn/credential/", app.DeleteCredential).Methods("DELETE")
-	router.HandleFunc("/webauthn/credential", app.DeleteCredential).Methods("DELETE")
+	mux.HandleFunc("DELETE /webauthn/credential/", app.DeleteCredential)
+	mux.HandleFunc("DELETE /webauthn/credential", app.DeleteCredential)
 
-	// authenticate request based on api key and secret in headers
-	// also adds user to context
-	router.Use(testAuthnMiddleware)
-
-	return router
+	return testAuthnMiddleware(mux)
 }
 
 func testAuthnMiddleware(next http.Handler) http.Handler {
@@ -861,7 +856,7 @@ func (ms *MfaSuite) Test_DeleteCredential() {
 
 			response := httptest.NewRecorder()
 			Router(ms.app).ServeHTTP(response, request)
-			ms.Equal(tt.wantStatus, response.Code, "incorrect http status")
+			ms.Equal(tt.wantStatus, response.Code, "incorrect http status, body: %s", response.Body.String())
 
 			if tt.wantStatus != http.StatusNoContent {
 				return
