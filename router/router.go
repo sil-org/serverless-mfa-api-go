@@ -10,72 +10,26 @@ import (
 func NewMux(app *mfa.App) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	for _, r := range getRoutes(app) {
-		mux.Handle(r.Pattern, authenticationMiddleware(r.HandlerFunc))
+	for pattern, handler := range getRoutes(app) {
+		mux.Handle(pattern, authenticationMiddleware(handler))
 	}
 	return mux
 }
 
-// route is used to pass information about a particular route.
-type route struct {
-	Pattern     string
-	HandlerFunc http.HandlerFunc
-}
-
 // getRoutes returns a list of routes for the server
-func getRoutes(app *mfa.App) []route {
-	return []route{
-		{
-			Pattern:     "POST /api-key/activate",
-			HandlerFunc: app.ActivateApiKey,
-		},
-		{
-			Pattern:     "POST /api-key/rotate",
-			HandlerFunc: app.RotateApiKey,
-		},
-		{
-			Pattern:     "POST /api-key",
-			HandlerFunc: app.CreateApiKey,
-		},
-		{
-			Pattern:     "POST /totp",
-			HandlerFunc: app.CreateTOTP,
-		},
-		{
-			Pattern:     "DELETE /totp/{" + mfa.UUIDParam + "}",
-			HandlerFunc: app.DeleteTOTP,
-		},
-		{
-			Pattern:     "POST /totp/{" + mfa.UUIDParam + "}/validate",
-			HandlerFunc: app.ValidateTOTP,
-		},
-		{
-			Pattern:     "POST /webauthn/register",
-			HandlerFunc: app.BeginRegistration,
-		},
-		{
-			Pattern:     "PUT /webauthn/register",
-			HandlerFunc: app.FinishRegistration,
-		},
-		{
-			Pattern:     "POST /webauthn/login",
-			HandlerFunc: app.BeginLogin,
-		},
-		{
-			Pattern:     "PUT /webauthn/login",
-			HandlerFunc: app.FinishLogin,
-		},
-		{
-			Pattern:     "DELETE /webauthn/user",
-			HandlerFunc: app.DeleteUser,
-		},
-		{ // This expects a path param that is the id that was previously returned
-			// as the key_handle_hash from the FinishRegistration call.
-			// Alternatively, if the id param indicates that a legacy U2F key should be removed
-			//	 (e.g. by matching the string "u2f")
-			//   then that user is saved with all of its legacy u2f fields blanked out.
-			Pattern:     "DELETE /webauthn/credential/{" + mfa.IDParam + "}/",
-			HandlerFunc: app.DeleteCredential,
-		},
+func getRoutes(app *mfa.App) map[string]http.HandlerFunc {
+	return map[string]http.HandlerFunc{
+		"POST /api-key/activate":                             app.ActivateApiKey,
+		"POST /api-key/rotate":                               app.RotateApiKey,
+		"POST /api-key":                                      app.CreateApiKey,
+		"POST /totp":                                         app.CreateTOTP,
+		"DELETE /totp/{" + mfa.UUIDParam + "}":               app.DeleteTOTP,
+		"POST /totp/{" + mfa.UUIDParam + "}/validate":        app.ValidateTOTP,
+		"POST /webauthn/register":                            app.BeginRegistration,
+		"PUT /webauthn/register":                             app.FinishRegistration,
+		"POST /webauthn/login":                               app.BeginLogin,
+		"PUT /webauthn/login":                                app.FinishLogin,
+		"DELETE /webauthn/user":                              app.DeleteUser,
+		"DELETE /webauthn/credential/{" + mfa.IDParam + "}/": app.DeleteCredential,
 	}
 }
