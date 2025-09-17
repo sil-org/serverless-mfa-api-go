@@ -116,24 +116,10 @@ func (ms *MfaSuite) TestNewTOTP() {
 func (ms *MfaSuite) TestAppDeleteTOTP() {
 	key := newTestKey()
 	otherKey := newTestKey()
-	totp := ms.newPasscode(key)
+	testTOTP := ms.newPasscode(key)
 
 	ctxWithAPIKey := context.WithValue(context.Background(), UserContextKey, key)
 	ctxWithOtherAPIKey := context.WithValue(context.Background(), UserContextKey, otherKey)
-
-	requestWithCorrectID := &http.Request{
-		Method: http.MethodDelete,
-		URL:    &url.URL{Path: "/totp/" + totp.UUID},
-	}
-	requestWithCorrectID = requestWithCorrectID.WithContext(ctxWithAPIKey)
-
-	requestWithWrongKey := requestWithCorrectID.WithContext(ctxWithOtherAPIKey)
-
-	requestWithWrongUUID := &http.Request{
-		Method: http.MethodDelete,
-		URL:    &url.URL{Path: "/totp/" + NewUUID()},
-	}
-	requestWithWrongUUID = requestWithWrongUUID.WithContext(ctxWithAPIKey)
 
 	tests := []struct {
 		name       string
@@ -142,17 +128,17 @@ func (ms *MfaSuite) TestAppDeleteTOTP() {
 	}{
 		{
 			name:       "wrong UUID",
-			request:    requestWithWrongUUID,
+			request:    ms.newRequest(ctxWithAPIKey, http.MethodDelete, "/totp/"+NewUUID(), ""),
 			wantStatus: http.StatusNotFound,
 		},
 		{
 			name:       "correct UUID, wrong key",
-			request:    requestWithWrongKey,
+			request:    ms.newRequest(ctxWithOtherAPIKey, http.MethodDelete, "/totp/"+testTOTP.UUID, ""),
 			wantStatus: http.StatusNotFound,
 		},
 		{
 			name:       "correct UUID, correct key",
-			request:    requestWithCorrectID,
+			request:    ms.newRequest(ctxWithAPIKey, http.MethodDelete, "/totp/"+testTOTP.UUID, ""),
 			wantStatus: http.StatusNoContent,
 		},
 	}
@@ -167,6 +153,17 @@ func (ms *MfaSuite) TestAppDeleteTOTP() {
 			ms.Equalf(tt.wantStatus, response.Code, "incorrect http status, response body: %s", response.Body.String())
 		})
 	}
+}
+
+func (ms *MfaSuite) newRequest(ctx context.Context, method, path, body string) *http.Request {
+	r := &http.Request{
+		Method: method,
+		URL:    &url.URL{Path: path},
+	}
+	if body != "" {
+		r.Body = io.NopCloser(strings.NewReader(body))
+	}
+	return r.WithContext(ctx)
 }
 
 func (ms *MfaSuite) newPasscode(key ApiKey) TOTP {
