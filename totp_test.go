@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+
+	uuid "github.com/satori/go.uuid"
 )
 
 func (ms *MfaSuite) TestAppCreateTOTP() {
@@ -110,4 +112,14 @@ func (ms *MfaSuite) TestNewTOTP() {
 	plainText, err := apiKey.DecryptLegacy(got.EncryptedTotpKey)
 	ms.NoError(err)
 	ms.Equal(got.Key, plainText, "EncryptedTotpKey isn't correct")
+}
+
+func (ms *MfaSuite) newPasscode(key ApiKey) TOTP {
+	totp := TOTP{
+		UUID:             uuid.NewV4().String(),
+		ApiKey:           key.Key,
+		EncryptedTotpKey: mustEncryptLegacy(key, "plain text TOTP key"),
+	}
+	must(ms.app.db.Store(ms.app.GetConfig().TotpTable, totp))
+	return totp
 }
