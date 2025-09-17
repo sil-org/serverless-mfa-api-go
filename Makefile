@@ -18,7 +18,7 @@ test: clean db
 db:
 	docker compose up -d dynamo
 
-dbinit: db wait createwebauthntable createapikeytable
+dbinit: db wait createwebauthntable createapikeytable createtotptable
 
 wait:
 	sleep 5
