@@ -635,3 +635,55 @@ paths:
           description: Success
         401:
           $ref: "#/components/responses/UnauthorizedError"
+
+  /totp:
+    post:
+      summary: Create a new passcode (TOTP)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                issuer:
+                  type: string
+                  description: >-
+                    The name of the service/website for which the user is setting up this TOTP account.
+                  required: true
+                  example: "SIL IdP"
+                label:
+                  type: string
+                  description: A name for the user's account (such as their username).
+                  required: false
+                  example: "john_smith@example.com"
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uuid:
+                    type: string
+                    description: The unique identifier for the passcode.
+                    example: "aaaaaaaa-1111-aaaa-1111-aaaaaaaaaaaa"
+                  totpKey:
+                    type: string
+                    description: The passcode secret key.
+                    example: "0123456789ABCDEF0123456789ABCDEF"
+                  imageUrl:
+                    type: string
+                    description: >-
+                      ImageURL is a base64-encoded image in data URL format like "data:image/png;base64,iVBORw0KGgo...". 
+                      The image is a QR code that contains the OTPAuthURL, which the user scans to store the shared 
+                      secret key and metadata in their authenticator app.
+                    example: "data:image/png;base64,iVBORw0KGgo..."
+                  otpAuthUrl:
+                    type: string
+                    description: >-
+                      OTPAuthURL is an otpauth URI that contains the passcode secret key. It may also contain metadata 
+                      like issuer, algorithm, and number of digits.
+                    example: "otpauth://totp/idp:john_smith?secret=0123456789ABCDEF0123456789ABCDEF&issuer=SIL%20IdP"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"

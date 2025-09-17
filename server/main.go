@@ -96,6 +96,12 @@ func getRoutes(app *mfa.App) []route {
 			Pattern:     fmt.Sprintf("/webauthn/credential/{%s}", mfa.IDParam),
 			HandlerFunc: app.DeleteCredential,
 		},
+		{
+			Name:        "CreateTOTP",
+			Method:      "POST",
+			Pattern:     "/totp",
+			HandlerFunc: app.CreateTOTP,
+		},
 	}
 }
 
