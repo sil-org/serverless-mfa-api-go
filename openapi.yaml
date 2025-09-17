@@ -638,7 +638,7 @@ paths:
 
   /totp:
     post:
-      summary: Create a new passcode
+      summary: Create a new passcode (TOTP)
       requestBody:
         content:
           application/json:
