@@ -62,11 +62,17 @@ type CreateTOTPResponseBody struct {
 	ImageURL   string `json:"imageUrl"`
 }
 
+// ValidateTOTPRequestBody defines the JSON request body for the ValidateTOTP endpoint
+type ValidateTOTPRequestBody struct {
+	Code string `json:"code"`
+}
+
 // CreateTOTP is the http handler to create a new TOTP passcode.
 func (a *App) CreateTOTP(w http.ResponseWriter, r *http.Request) {
 	requestBody, err := parseCreateTOTPRequestBody(r.Body)
 	if err != nil {
-		jsonResponse(w, err, http.StatusBadRequest)
+		log.Println("Invalid CreateTOTP request body:", err)
+		jsonResponse(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
 
@@ -197,6 +203,69 @@ func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, nil, http.StatusNoContent)
+}
+
+// ValidateTOTP is the http handler to validate a passcode.
+func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
+	const notFound = "TOTP not found"
+
+	requestBody, err := parseValidateTOTPRequestBody(r.Body)
+	if err != nil {
+		log.Printf("Invalid ValidateTOTP request body: %s", err)
+		jsonResponse(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	id := r.PathValue(UUIDParam)
+
+	key, err := getAPIKey(r)
+	if err != nil {
+		jsonResponse(w, fmt.Errorf("API Key not found in request context: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	var t TOTP
+	err = a.db.Load(envConfig.TotpTable, TOTPTablePK, id, &t)
+	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			jsonResponse(w, notFound, http.StatusNotFound)
+		} else {
+			log.Printf("error loading TOTP: %s", err)
+			jsonResponse(w, "Internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	if key.Key != t.ApiKey {
+		jsonResponse(w, notFound, http.StatusNotFound)
+		return
+	}
+
+	valid := totp.Validate(requestBody.Code, t.Key)
+	if !valid {
+		jsonResponse(w, "Invalid", http.StatusUnauthorized)
+		return
+	}
+
+	jsonResponse(w, "Valid", http.StatusOK)
+}
+
+// parseValidateTOTPRequestBody parses and validates the ValidateTOTP request body
+func parseValidateTOTPRequestBody(body io.ReadCloser) (requestBody *ValidateTOTPRequestBody, err error) {
+	if body == nil {
+		return nil, fmt.Errorf("empty request body")
+	}
+
+	err = json.NewDecoder(body).Decode(&requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("invalid request: %w", err)
+	}
+
+	if requestBody.Code == "" {
+		return nil, errors.New("code is required")
+	}
+
+	return requestBody, nil
 }
 
 // authTOTP is a just a placeholder for TOTP. It takes the verified API Key and returns it as an authenticated User
