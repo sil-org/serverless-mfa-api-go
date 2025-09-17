@@ -629,7 +629,7 @@ paths:
 
   /webauthn/credential/{id}:
     delete:
-      summary: Delete Credential (not currently supported in the Lambda implementation)
+      summary: Delete Credential
       responses:
         204:
           description: Success

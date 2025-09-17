@@ -76,7 +76,8 @@ func (k *ApiKey) IsCorrect(given string) error {
 
 	err := bcrypt.CompareHashAndPassword([]byte(k.HashedSecret), []byte(given))
 	if err != nil {
-		return err
+		return fmt.Errorf("hash does not match plaintext (hash: %s) (plaintext: %v...): %w",
+			k.HashedSecret, given[0:min(len(given), 4)], err)
 	}
 
 	return nil
