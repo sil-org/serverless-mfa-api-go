@@ -630,6 +630,19 @@ paths:
   /webauthn/credential/{id}:
     delete:
       summary: Delete Credential
+      description: >-
+        DeleteCredential removes a single passkey identified by the id parameter, which is the `key_handle_hash`
+        returned by the Finish Registration endpoint.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: >-
+            The unique identifier for the credential. It is the `key_handle_hash` value returned by the 
+            Finish Registration endpoint. If the id is the fixed string "u2f" the legacy U2F data is removed from the
+            record.
       responses:
         204:
           description: Success
