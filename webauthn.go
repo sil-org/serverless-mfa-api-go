@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
-	uuid "github.com/satori/go.uuid"
 )
 
 // WebauthnMeta holds metadata about the calling service for use in WebAuthn responses.
@@ -56,7 +55,7 @@ func (a *App) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 
 	// If user.id is empty, treat as new user/registration
 	if user.ID == "" {
-		user.ID = uuid.NewV4().String()
+		user.ID = NewUUID()
 	}
 
 	options, err := user.BeginRegistration()

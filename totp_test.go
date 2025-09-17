@@ -8,8 +8,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
-
-	uuid "github.com/satori/go.uuid"
 )
 
 func (ms *MfaSuite) TestAppCreateTOTP() {
@@ -133,7 +131,7 @@ func (ms *MfaSuite) TestAppDeleteTOTP() {
 
 	requestWithWrongUUID := &http.Request{
 		Method: http.MethodDelete,
-		URL:    &url.URL{Path: "/totp/" + uuid.NewV4().String()},
+		URL:    &url.URL{Path: "/totp/" + NewUUID()},
 	}
 	requestWithWrongUUID = requestWithWrongUUID.WithContext(ctxWithAPIKey)
 
@@ -173,7 +171,7 @@ func (ms *MfaSuite) TestAppDeleteTOTP() {
 
 func (ms *MfaSuite) newPasscode(key ApiKey) TOTP {
 	totp := TOTP{
-		UUID:             uuid.NewV4().String(),
+		UUID:             NewUUID(),
 		ApiKey:           key.Key,
 		EncryptedTotpKey: mustEncryptLegacy(key, "plain text TOTP key"),
 	}

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -50,4 +52,13 @@ func jsonResponse(w http.ResponseWriter, body interface{}, status int) {
 	if err != nil {
 		log.Printf("failed to write response in jsonResponse: %s\n", err)
 	}
+}
+
+// NewUUID returns a new V4 UUID value as a text string
+func NewUUID() string {
+	u, err := uuid.NewRandom()
+	if err != nil {
+		panic("failed to generate uuid: " + err.Error())
+	}
+	return u.String()
 }

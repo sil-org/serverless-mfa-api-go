@@ -13,7 +13,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/pquerna/otp v1.5.0
-	github.com/satori/go.uuid v1.2.0
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/crypto v0.39.0
 )
