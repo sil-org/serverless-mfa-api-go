@@ -46,9 +46,13 @@ This endpoint has not yet been proven in production use. Proceed at your own ris
 
 `DELETE /totp/{uuid}`
 
+Coming soon.
+
 ### Validate TOTP Passcode
 
 `POST /totp/{uuid}/validate`
+
+Coming soon.
 
 ## The Webauthn API
 Yes, as you'll see below this API makes heavy use of custom headers for things that seem like they could go into 
