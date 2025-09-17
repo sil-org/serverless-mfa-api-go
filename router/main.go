@@ -38,6 +38,10 @@ func getRoutes(app *mfa.App) []route {
 			HandlerFunc: app.CreateApiKey,
 		},
 		{
+			Pattern:     "POST /webauthn/register",
+			HandlerFunc: app.BeginRegistration,
+		},
+		{
 			Pattern:     "PUT /webauthn/register",
 			HandlerFunc: app.FinishRegistration,
 		},
