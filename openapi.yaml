@@ -687,3 +687,21 @@ paths:
                     example: "otpauth://totp/idp:john_smith?secret=0123456789ABCDEF0123456789ABCDEF&issuer=SIL%20IdP"
         401:
           $ref: "#/components/responses/UnauthorizedError"
+  /totp/{uuid}:
+    delete:
+      summary: Delete a passcode (TOTP)
+      parameters:
+        - in: path
+          name: uuid
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the passcode.
+      responses:
+        "204":
+          description: Success
+        "404":
+          description: Not found
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"

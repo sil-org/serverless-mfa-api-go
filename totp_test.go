@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 
 	uuid "github.com/satori/go.uuid"
@@ -38,7 +39,7 @@ func (ms *MfaSuite) TestAppCreateTOTP() {
 		ms.Run(tt.name, func() {
 			response := httptest.NewRecorder()
 			ms.app.CreateTOTP(response, tt.request)
-			ms.Equalf(tt.wantStatus, response.Code, "incorrect http status, body %s", response.Body.String())
+			ms.Equalf(tt.wantStatus, response.Code, "incorrect http status, response body: %s", response.Body.String())
 
 			if tt.wantStatus == http.StatusOK {
 				var responseBody CreateTOTPResponseBody
@@ -112,6 +113,62 @@ func (ms *MfaSuite) TestNewTOTP() {
 	plainText, err := apiKey.DecryptLegacy(got.EncryptedTotpKey)
 	ms.NoError(err)
 	ms.Equal(got.Key, plainText, "EncryptedTotpKey isn't correct")
+}
+
+func (ms *MfaSuite) TestAppDeleteTOTP() {
+	key := newTestKey()
+	otherKey := newTestKey()
+	totp := ms.newPasscode(key)
+
+	ctxWithAPIKey := context.WithValue(context.Background(), UserContextKey, key)
+	ctxWithOtherAPIKey := context.WithValue(context.Background(), UserContextKey, otherKey)
+
+	requestWithCorrectID := &http.Request{
+		Method: http.MethodDelete,
+		URL:    &url.URL{Path: "/totp/" + totp.UUID},
+	}
+	requestWithCorrectID = requestWithCorrectID.WithContext(ctxWithAPIKey)
+
+	requestWithWrongKey := requestWithCorrectID.WithContext(ctxWithOtherAPIKey)
+
+	requestWithWrongUUID := &http.Request{
+		Method: http.MethodDelete,
+		URL:    &url.URL{Path: "/totp/" + uuid.NewV4().String()},
+	}
+	requestWithWrongUUID = requestWithWrongUUID.WithContext(ctxWithAPIKey)
+
+	tests := []struct {
+		name       string
+		request    *http.Request
+		wantStatus int
+	}{
+		{
+			name:       "wrong UUID",
+			request:    requestWithWrongUUID,
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			name:       "correct UUID, wrong key",
+			request:    requestWithWrongKey,
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			name:       "correct UUID, correct key",
+			request:    requestWithCorrectID,
+			wantStatus: http.StatusNoContent,
+		},
+	}
+	for _, tt := range tests {
+		ms.Run(tt.name, func() {
+			mux := &http.ServeMux{}
+			mux.HandleFunc("DELETE /totp/{"+UUIDParam+"}", ms.app.DeleteTOTP)
+
+			response := httptest.NewRecorder()
+			mux.ServeHTTP(response, tt.request)
+
+			ms.Equalf(tt.wantStatus, response.Code, "incorrect http status, response body: %s", response.Body.String())
+		})
+	}
 }
 
 func (ms *MfaSuite) newPasscode(key ApiKey) TOTP {

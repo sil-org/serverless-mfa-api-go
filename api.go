@@ -6,7 +6,10 @@ import (
 	"net/http"
 )
 
-const IDParam = "id"
+const (
+	IDParam   = "id"
+	UUIDParam = "uuid"
+)
 
 // simpleError is a custom error type that can be JSON-encoded for API responses
 type simpleError struct {

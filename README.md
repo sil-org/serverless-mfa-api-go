@@ -46,8 +46,6 @@ This endpoint has not yet been proven in production use. Proceed at your own ris
 
 `DELETE /totp/{uuid}`
 
-Coming soon.
-
 ### Validate TOTP Passcode
 
 `POST /totp/{uuid}/validate`
