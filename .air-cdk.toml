@@ -1,0 +1,11 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+bin = ""
+cmd = './build.sh'
+delay = 100
+exclude_dir = ["tmp", "cdk"]
+full_bin = "sam local start-api --port 8160 --template cdk/cdk.out/twosv-api-dev.template.json --env-vars cdk/env.json"
+include_ext = ["go"]
+kill_delay = "0s"

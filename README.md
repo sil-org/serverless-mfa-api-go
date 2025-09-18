@@ -94,3 +94,60 @@ to do with WebAuthn, but is the primary key for finding the right records in Dyn
 
 ### Delete one of the user's Webauthn credentials
 `DELETE /webauthn/credential`
+
+# Development
+
+## Unit tests
+
+To run unit tests, simply run "make test". It will spin up a Docker Compose environment and run the tests using
+Docker containers for the API and for DynamoDB.
+
+## Manual testing
+
+Unit tests can be run individually, either on the command line or through your IDE. It is also possible to 
+test the server and Lambda implementations locally.
+
+### Server
+
+#### HTTP
+
+If HTTPS is not needed, simply start the `app` container and exercise the API using localhost and the Docker port
+defined in docker-compose.yml (currently 8161).
+
+#### HTTPS
+
+To use a "demo UI" that can interact with the API using HTTPS, use Traefik proxy, which is defined in the Docker
+Compose environment. Traefik is a proxy that creates a Let's Encrypt certificate and routes traffic to the local
+container via a registered DNS record. To configure this, define the following variables in `local.env`:
+
+- DNS_PROVIDER=cloudflare
+- CLOUDFLARE_DNS_API_TOKEN=<insert a valid Cloudflare token that has DNS write permission on the domain defined below>
+- LETS_ENCRYPT_EMAIL=<insert your actual email address here>
+- LETS_ENCRYPT_CA=production
+- TLD=<your DNS domain>
+- SANS=mfa-ui.<your domain>,mfa-app.<your domain>
+- BACKEND1_URL=http://ui:80
+- FRONTEND1_DOMAIN=mfa-ui.<your domain>
+- BACKEND2_URL=http://app:8080
+- FRONTEND2_DOMAIN=mfa-app.<your domain>
+
+Create DNS A records (without Cloudflare proxy enabled) for the values defined in `FRONTEND1_DOMAIN` and 
+`FRONTEND2_DOMAIN` pointing to 127.0.0.1 and wait for DNS propagation. Once all of the above configuration is in place,
+run `make demo`. The first time will take several minutes for all the initialization. You can watch Docker logs on the 
+proxy container to keep tabs on the progress.
+
+### Lambda
+
+To exercise the API as it would be used in AWS Lambda, run this command: `air -c .air-cdk.toml`. This will run a
+file watcher that will rebuild the app code and the CDK stack, then run `sam local start-api` using the generated
+Cloudformation template. This will listen on port 8160. Any code changes will trigger a rebuild and SAM will restart
+using the new code.
+
+Implementation notes:
+
+- SAM uses Docker internally, which would make it complicated to run with Docker Compose.
+- You will need to install CDK and SAM on your computer for this to work.
+- It can use the DynamoDB container in Docker Compose, which can be started using `make dbinit`.
+- The `make dbinit` command creates an APIKey (key: `EC7C2E16-5028-432F-8AF2-A79A64CF3BC1` 
+secret: `1ED18444-7238-410B-A536-D6C15A3C`)
+- Some unit tests will delete the APIKey created by `make dbinit`.
