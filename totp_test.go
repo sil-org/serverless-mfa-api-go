@@ -124,6 +124,9 @@ func (ms *MfaSuite) TestAppDeleteTOTP() {
 	ctxWithAPIKey := context.WithValue(context.Background(), UserContextKey, key)
 	ctxWithOtherAPIKey := context.WithValue(context.Background(), UserContextKey, otherKey)
 
+	mux := &http.ServeMux{}
+	mux.HandleFunc("DELETE /totp/{"+UUIDParam+"}", ms.app.DeleteTOTP)
+
 	tests := []struct {
 		name       string
 		request    *http.Request
@@ -147,9 +150,6 @@ func (ms *MfaSuite) TestAppDeleteTOTP() {
 	}
 	for _, tt := range tests {
 		ms.Run(tt.name, func() {
-			mux := &http.ServeMux{}
-			mux.HandleFunc("DELETE /totp/{"+UUIDParam+"}", ms.app.DeleteTOTP)
-
 			response := httptest.NewRecorder()
 			mux.ServeHTTP(response, tt.request)
 
@@ -169,6 +169,9 @@ func (ms *MfaSuite) TestAppValidateTOTP() {
 	now := time.Now()
 	code, err := totp.GenerateCode(testTOTP.Key, now)
 	ms.NoError(err)
+
+	mux := &http.ServeMux{}
+	mux.HandleFunc("POST /totp/{"+UUIDParam+"}/validate", ms.app.ValidateTOTP)
 
 	tests := []struct {
 		name       string
@@ -202,9 +205,6 @@ func (ms *MfaSuite) TestAppValidateTOTP() {
 	}
 	for _, tt := range tests {
 		ms.Run(tt.name, func() {
-			mux := &http.ServeMux{}
-			mux.HandleFunc("POST /totp/{"+UUIDParam+"}/validate", ms.app.ValidateTOTP)
-
 			response := httptest.NewRecorder()
 			mux.ServeHTTP(response, tt.request)
 

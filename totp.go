@@ -18,6 +18,11 @@ import (
 // TOTPTablePK is the primary key in the TOTP DynamoDB table
 const TOTPTablePK = "uuid"
 
+const (
+	notFound            = "TOTP not found"
+	internalServerError = "Internal server error"
+)
+
 // TOTP contains data to represent a Time-based One-Time Passcode (token). The ID and encrypted fields are persisted in
 // DynamoDB. The others are non-encrypted and are short-lived.
 type TOTP struct {
@@ -78,7 +83,8 @@ func (a *App) CreateTOTP(w http.ResponseWriter, r *http.Request) {
 
 	apiKey, err := getAPIKey(r)
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("API Key not found in request context: %w", err), http.StatusInternalServerError)
+		log.Printf("CreateTOTP API key error: %v", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
@@ -98,12 +104,13 @@ func (a *App) CreateTOTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // parseCreateTOTPRequestBody parses and validates the CreateTOTP request body
-func parseCreateTOTPRequestBody(body io.ReadCloser) (requestBody *CreateTOTPRequestBody, err error) {
+func parseCreateTOTPRequestBody(body io.ReadCloser) (*CreateTOTPRequestBody, error) {
 	if body == nil {
 		return nil, fmt.Errorf("empty request body")
 	}
 
-	err = json.NewDecoder(body).Decode(&requestBody)
+	requestBody := &CreateTOTPRequestBody{}
+	err := json.NewDecoder(body).Decode(&requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("invalid request: %w", err)
 	}
@@ -168,13 +175,12 @@ func newTOTP(db *Storage, apiKey ApiKey, issuer, name string) (TOTP, error) {
 
 // DeleteTOTP is the http handler to delete a passcode.
 func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
-	const notFound = "TOTP not found"
-
 	id := r.PathValue(UUIDParam)
 
 	key, err := getAPIKey(r)
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("API Key not found in request context: %w", err), http.StatusInternalServerError)
+		log.Printf("DeleteTOTP API key error: %v", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
@@ -185,7 +191,7 @@ func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 			jsonResponse(w, notFound, http.StatusNotFound)
 		} else {
 			log.Printf("error loading TOTP: %s", err)
-			jsonResponse(w, "Internal server error", http.StatusInternalServerError)
+			jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		}
 		return
 	}
@@ -207,8 +213,6 @@ func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 
 // ValidateTOTP is the http handler to validate a passcode.
 func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
-	const notFound = "TOTP not found"
-
 	requestBody, err := parseValidateTOTPRequestBody(r.Body)
 	if err != nil {
 		log.Printf("Invalid ValidateTOTP request body: %s", err)
@@ -220,7 +224,8 @@ func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 
 	key, err := getAPIKey(r)
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("API Key not found in request context: %w", err), http.StatusInternalServerError)
+		log.Printf("ValidateTOTP API key error: %v", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
@@ -231,7 +236,7 @@ func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 			jsonResponse(w, notFound, http.StatusNotFound)
 		} else {
 			log.Printf("error loading TOTP: %s", err)
-			jsonResponse(w, "Internal server error", http.StatusInternalServerError)
+			jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		}
 		return
 	}
@@ -251,12 +256,13 @@ func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // parseValidateTOTPRequestBody parses and validates the ValidateTOTP request body
-func parseValidateTOTPRequestBody(body io.ReadCloser) (requestBody *ValidateTOTPRequestBody, err error) {
+func parseValidateTOTPRequestBody(body io.ReadCloser) (*ValidateTOTPRequestBody, error) {
 	if body == nil {
 		return nil, fmt.Errorf("empty request body")
 	}
 
-	err = json.NewDecoder(body).Decode(&requestBody)
+	requestBody := &ValidateTOTPRequestBody{}
+	err := json.NewDecoder(body).Decode(&requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("invalid request: %w", err)
 	}
