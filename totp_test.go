@@ -161,7 +161,8 @@ func (ms *MfaSuite) TestAppDeleteTOTP() {
 func (ms *MfaSuite) TestAppValidateTOTP() {
 	key := newTestKey()
 	otherKey := newTestKey()
-	testTOTP := ms.newPasscode(key)
+	testTOTP, err := newTOTP(ms.app.db, key, "issuer", "name")
+	ms.NoError(err)
 
 	ctxWithAPIKey := context.WithValue(context.Background(), UserContextKey, key)
 	ctxWithOtherAPIKey := context.WithValue(context.Background(), UserContextKey, otherKey)
