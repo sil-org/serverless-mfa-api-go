@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -346,12 +345,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 	key := user.ApiKey
 	must(db.Store(config.ApiKeyTable, key))
 
-	totp := TOTP{
-		UUID:             uuid.NewV4().String(),
-		ApiKey:           key.Key,
-		EncryptedTotpKey: mustEncryptLegacy(key, "plain text TOTP key"),
-	}
-	must(db.Store(ms.app.GetConfig().TotpTable, totp))
+	totp := ms.newPasscode(key)
 
 	newKey := newTestKey()
 	must(db.Store(config.ApiKeyTable, newKey))
@@ -513,11 +507,7 @@ func (ms *MfaSuite) TestApiKey_ReEncryptTOTPs() {
 	must(newKey.Activate())
 	must(ms.app.GetDB().Store(ms.app.GetConfig().ApiKeyTable, newKey))
 
-	must(storage.Store(ms.app.GetConfig().TotpTable, TOTP{
-		UUID:             uuid.NewV4().String(),
-		ApiKey:           oldKey.Key,
-		EncryptedTotpKey: mustEncryptLegacy(oldKey, "plain text TOTP key"),
-	}))
+	_ = ms.newPasscode(oldKey)
 
 	complete, incomplete, err := newKey.ReEncryptTOTPs(storage, oldKey)
 	ms.NoError(err)

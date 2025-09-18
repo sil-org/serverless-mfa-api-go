@@ -8,11 +8,16 @@ import (
 	"fmt"
 	"image/png"
 	"io"
+	"log"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/pquerna/otp/totp"
 )
+
+// TOTPTablePK is the primary key in the TOTP DynamoDB table
+const TOTPTablePK = "uuid"
 
 // TOTP contains data to represent a Time-based One-Time Passcode (token). The ID and encrypted fields are persisted in
 // DynamoDB. The others are non-encrypted and are short-lived.
@@ -37,6 +42,11 @@ type TOTP struct {
 	// OTPAuthURL is a otpauth URI like "otpauth://totp/idp:john_doe?secret=G5KFM3LNJ5NWQP3O&issuer=idp" that contains
 	// the passcode secret key. It may also contain metadata like issuer, algorithm, and number of digits.
 	OTPAuthURL string `dynamodbav:"-" json:"-"`
+}
+
+// debugString is used by the debugger to show useful TOTP information in watched variables
+func (t TOTP) debugString() string {
+	return fmt.Sprintf("UUID: %s, Key: %s, ApiKey: %s", t.UUID, t.Key, t.ApiKey)
 }
 
 // CreateTOTPRequestBody defines the JSON request body for the CreateTOTP endpoint
@@ -149,6 +159,47 @@ func newTOTP(db *Storage, apiKey ApiKey, issuer, name string) (TOTP, error) {
 		return TOTP{}, fmt.Errorf("failed to store TOTP: %w", err)
 	}
 	return t, nil
+}
+
+// DeleteTOTP is the http handler to delete a passcode.
+func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
+	const notFound = "TOTP not found"
+	const internalServerError = "Internal server error"
+
+	id := r.PathValue(UUIDParam)
+
+	key, err := getAPIKey(r)
+	if err != nil {
+		log.Printf("API Key not found in request context: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
+		return
+	}
+
+	var t TOTP
+	err = a.db.Load(envConfig.TotpTable, TOTPTablePK, id, &t)
+	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			jsonResponse(w, notFound, http.StatusNotFound)
+		} else {
+			log.Printf("error loading TOTP: %s", err)
+			jsonResponse(w, internalServerError, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	if key.Key != t.ApiKey {
+		jsonResponse(w, notFound, http.StatusNotFound)
+		return
+	}
+
+	err = a.db.Delete(envConfig.TotpTable, TOTPTablePK, id)
+	if err != nil {
+		log.Printf("Failed to delete TOTP: %s", err)
+		jsonResponse(w, "Failed to delete TOTP", http.StatusInternalServerError)
+		return
+	}
+
+	jsonResponse(w, nil, http.StatusNoContent)
 }
 
 // authTOTP is a just a placeholder for TOTP. It takes the verified API Key and returns it as an authenticated User

@@ -38,6 +38,14 @@ func getRoutes(app *mfa.App) []route {
 			HandlerFunc: app.CreateApiKey,
 		},
 		{
+			Pattern:     "POST /totp",
+			HandlerFunc: app.CreateTOTP,
+		},
+		{
+			Pattern:     "DELETE /totp/{" + mfa.UUIDParam + "}",
+			HandlerFunc: app.DeleteTOTP,
+		},
+		{
 			Pattern:     "POST /webauthn/register",
 			HandlerFunc: app.BeginRegistration,
 		},
@@ -64,10 +72,6 @@ func getRoutes(app *mfa.App) []route {
 			//   then that user is saved with all of its legacy u2f fields blanked out.
 			Pattern:     "DELETE /webauthn/credential/{" + mfa.IDParam + "}",
 			HandlerFunc: app.DeleteCredential,
-		},
-		{
-			Pattern:     "POST /totp",
-			HandlerFunc: app.CreateTOTP,
 		},
 	}
 }
