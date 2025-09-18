@@ -49,7 +49,8 @@ type finishLoginResponse struct {
 func (a *App) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	user, err := getWebauthnUser(r)
 	if err != nil {
-		jsonResponse(w, err, http.StatusBadRequest)
+		log.Printf("failed to get user for BeginRegistration: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
@@ -60,7 +61,8 @@ func (a *App) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 
 	options, err := user.BeginRegistration()
 	if err != nil {
-		jsonResponse(w, fmt.Sprintf("failed to begin registration: %s", err), http.StatusBadRequest)
+		log.Printf("failed to begin registration: %s", err)
+		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
 
@@ -77,13 +79,15 @@ func (a *App) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 func (a *App) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	user, err := getWebauthnUser(r)
 	if err != nil {
-		jsonResponse(w, err, http.StatusBadRequest)
+		log.Printf("failed to get user for FinishRegistration: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
 	keyHandleHash, err := user.FinishRegistration(r)
 	if err != nil {
-		jsonResponse(w, err, http.StatusBadRequest)
+		log.Printf("failed to finish registration: %s", err)
+		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
 
@@ -99,15 +103,15 @@ func (a *App) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 func (a *App) BeginLogin(w http.ResponseWriter, r *http.Request) {
 	user, err := getWebauthnUser(r)
 	if err != nil {
-		jsonResponse(w, err, http.StatusBadRequest)
-		log.Printf("error getting user from context: %s\n", err)
+		log.Printf("failed to get user for BeginLogin: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
 	options, err := user.BeginLogin()
 	if err != nil {
-		jsonResponse(w, err, http.StatusBadRequest)
-		log.Printf("error beginning user login: %s\n", err)
+		log.Printf("error beginning user login: %s", err)
+		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
 
@@ -119,20 +123,19 @@ func (a *App) BeginLogin(w http.ResponseWriter, r *http.Request) {
 func (a *App) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	user, err := getWebauthnUser(r)
 	if err != nil {
-		jsonResponse(w, err, http.StatusBadRequest)
-		log.Printf("error getting user from context: %s\n", err)
+		log.Printf("failed to get user for FinishLogin: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
 	credential, err := user.FinishLogin(r)
 	if err != nil {
-		jsonResponse(w, err, http.StatusBadRequest)
-
 		// SonarQube flagged this as vulnerable to injection attacks. Rather than exhaustively search for places
 		// where user input is inserted into the error message, I'll just sanitize it as recommended.
 		sanitizedError := strings.ReplaceAll(strings.ReplaceAll(err.Error(), "\n", "_"), "\r", "_")
-		log.Printf("error finishing user login: %s\n", sanitizedError)
+		log.Printf("error finishing user login: %s", sanitizedError)
 
+		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
 
@@ -149,14 +152,14 @@ func (a *App) FinishLogin(w http.ResponseWriter, r *http.Request) {
 func (a *App) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	user, err := getWebauthnUser(r)
 	if err != nil {
-		jsonResponse(w, err, http.StatusBadRequest)
-		log.Printf("error getting user from context: %s\n", err)
+		log.Printf("failed to get user for DeleteUser: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
 	if err := user.Delete(); err != nil {
-		jsonResponse(w, err, http.StatusInternalServerError)
 		log.Printf("error deleting user: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
@@ -169,25 +172,32 @@ func (a *App) DeleteUser(w http.ResponseWriter, r *http.Request) {
 func (a *App) DeleteCredential(w http.ResponseWriter, r *http.Request) {
 	user, err := getWebauthnUser(r)
 	if err != nil {
-		jsonResponse(w, err, http.StatusBadRequest)
-		log.Printf("error getting user from context: %s\n", err)
+		log.Printf("failed to get user for DeleteCredential: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
 	credID := r.PathValue(IDParam)
 	if credID == "" {
 		err := fmt.Errorf("%s path parameter not provided to DeleteCredential, path: %s", IDParam, r.URL.Path)
-		jsonResponse(w, err, http.StatusBadRequest)
-		log.Printf("%s\n", err)
+		log.Printf("%s", err)
+		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
 
 	status, err := user.DeleteCredential(credID)
 	if err != nil {
-		log.Printf("error deleting user credential: %s", err)
+		log.Printf("error deleting user credential (%d): %s", status, err)
 	}
 
-	jsonResponse(w, err, status)
+	switch status {
+	case http.StatusNoContent:
+		jsonResponse(w, nil, status)
+	case http.StatusNotFound:
+		jsonResponse(w, "Not found", status)
+	case http.StatusInternalServerError:
+		jsonResponse(w, internalServerError, status)
+	}
 }
 
 // fixStringEncoding converts a string from standard Base64 to Base64-URL
@@ -214,7 +224,7 @@ func getWebAuthnFromApiMeta(meta WebauthnMeta) (*webauthn.WebAuthn, error) {
 		Debug:         true,
 	})
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("failed to get new webauthn: %s", err)
 	}
 
 	return web, nil

@@ -77,7 +77,7 @@ func NewWebauthnUser(apiConfig WebauthnMeta, storage *Storage, apiKey ApiKey, we
 
 	err := u.Load()
 	if err != nil {
-		log.Printf("failed to load user: %s\n", err)
+		log.Printf("failed to load user: %s", err)
 	}
 	return u
 }
@@ -107,7 +107,7 @@ func (u *WebauthnUser) saveSessionData(sessionData webauthn.SessionData) error {
 
 	js, err := json.Marshal(sessionData)
 	if err != nil {
-		log.Printf("error marshaling session data to json. Session data: %+v\n Error: %s\n", sessionData, err)
+		log.Printf("error marshaling session data to json. Session data: %+v, Error: %s", sessionData, err)
 		return err
 	}
 
@@ -354,7 +354,7 @@ func (u *WebauthnUser) BeginLogin() (*protocol.CredentialAssertion, error) {
 
 	err = u.saveSessionData(*sessionData)
 	if err != nil {
-		log.Printf("error saving session data: %s\n", err)
+		log.Printf("error saving session data: %s", err)
 		return nil, err
 	}
 

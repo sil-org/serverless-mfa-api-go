@@ -86,7 +86,7 @@ func jsonResponse(w http.ResponseWriter, body interface{}, status int) {
 	w.WriteHeader(status)
 	_, err = w.Write(jBody)
 	if err != nil {
-		log.Printf("faild to write response in jsonResponse: %s\n", err)
+		log.Printf("faild to write response in jsonResponse: %s", err)
 	}
 }
 
