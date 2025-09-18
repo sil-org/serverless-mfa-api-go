@@ -170,6 +170,9 @@ func (ms *MfaSuite) TestAppValidateTOTP() {
 	code, err := totp.GenerateCode(testTOTP.Key, now)
 	ms.NoError(err)
 
+	mux := &http.ServeMux{}
+	mux.HandleFunc("POST /totp/{"+UUIDParam+"}/validate", ms.app.ValidateTOTP)
+
 	tests := []struct {
 		name       string
 		request    *http.Request
@@ -202,9 +205,6 @@ func (ms *MfaSuite) TestAppValidateTOTP() {
 	}
 	for _, tt := range tests {
 		ms.Run(tt.name, func() {
-			mux := &http.ServeMux{}
-			mux.HandleFunc("POST /totp/{"+UUIDParam+"}/validate", ms.app.ValidateTOTP)
-
 			response := httptest.NewRecorder()
 			mux.ServeHTTP(response, tt.request)
 
