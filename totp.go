@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/pquerna/otp/totp"
 )
 
@@ -146,7 +145,7 @@ func newTOTP(db *Storage, apiKey ApiKey, issuer, name string) (TOTP, error) {
 	imageDataURL := "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes())
 
 	t := TOTP{
-		UUID:             uuid.New().String(),
+		UUID:             NewUUID(),
 		ApiKey:           apiKey.Key,
 		EncryptedTotpKey: cipherText,
 		Key:              key.Secret(),
