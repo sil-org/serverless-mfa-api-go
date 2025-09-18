@@ -246,6 +246,14 @@ func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	secret, err := key.DecryptLegacy(t.EncryptedTotpKey)
+	if err != nil {
+		log.Printf("failed to decrypt TOTP key: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
+		return
+	}
+	t.Key = secret
+
 	valid := totp.Validate(requestBody.Code, t.Key)
 	if !valid {
 		jsonResponse(w, "Invalid", http.StatusUnauthorized)
