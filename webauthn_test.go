@@ -172,7 +172,7 @@ func (ms *MfaSuite) Test_BeginRegistration() {
 			httpWriter: newLambdaResponseWriter(),
 			httpReq:    http.Request{},
 			wantBodyContains: []string{
-				`"error":"unable to get user from request context"`,
+				`"error":"Internal server error"`,
 			},
 		},
 		{
@@ -311,13 +311,13 @@ func (ms *MfaSuite) Test_FinishRegistration() {
 		{
 			name:             "no user",
 			httpReq:          http.Request{},
-			wantBodyContains: []string{`"error":"unable to get user from request context"`},
+			wantBodyContains: []string{`"error":"Internal server error"`},
 		},
 		{
 			name:    "request has no body",
 			httpReq: reqNoBody,
 			wantBodyContains: []string{
-				`"error":"request Body may not be nil in FinishRegistration"`,
+				`"error":"Invalid request"`,
 			},
 		},
 		{
@@ -479,13 +479,13 @@ func (ms *MfaSuite) Test_BeginLogin() {
 			name:             "no user",
 			httpWriter:       newLambdaResponseWriter(),
 			httpReq:          http.Request{},
-			wantBodyContains: []string{`"error":"unable to get user from request context"`},
+			wantBodyContains: []string{`"error":"Internal server error"`},
 		},
 		{
 			name:             "has a user but no credentials",
 			httpWriter:       newLambdaResponseWriter(),
 			httpReq:          reqNoCredentials,
-			wantBodyContains: []string{`"error":"Found no credentials for user"`},
+			wantBodyContains: []string{`"error":"Invalid request"`},
 		},
 		{
 			name:       "has a user with credentials",
@@ -656,7 +656,7 @@ func (ms *MfaSuite) Test_FinishLogin() {
 		{
 			name:             "no user",
 			httpReq:          http.Request{},
-			wantBodyContains: []string{`"error":"unable to get user from request context"`},
+			wantBodyContains: []string{`"error":"Internal server error"`},
 		},
 		{
 			name:    "with first credential",

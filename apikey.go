@@ -23,6 +23,7 @@ const ApiKeyTablePK = "value"
 
 // key rotation request parameters
 const (
+	// TODO: these should be snake case
 	paramNewKeyId     = "newKeyId"
 	paramNewKeySecret = "newKeySecret"
 	paramOldKeyId     = "oldKeyId"
@@ -34,6 +35,8 @@ const (
 	apiKeyNotFound   = "API Key not found"
 	emailIsRequired  = "email is required"
 )
+
+var ErrKeyAlreadyActivated = errors.New("key already activated")
 
 // ApiKey holds API key data from DynamoDB
 type ApiKey struct {
@@ -200,7 +203,7 @@ func (k *ApiKey) DecryptLegacy(ciphertext string) (string, error) {
 // ActivatedAt fields.
 func (k *ApiKey) Activate() error {
 	if k.ActivatedAt != 0 {
-		return errors.New("key already activated")
+		return ErrKeyAlreadyActivated
 	}
 
 	random := make([]byte, 32)
@@ -384,8 +387,12 @@ func (a *App) ActivateApiKey(w http.ResponseWriter, r *http.Request) {
 
 	err = newKey.Activate()
 	if err != nil {
-		log.Printf("failed to activate key: %s", err)
-		jsonResponse(w, invalidRequest, http.StatusBadRequest)
+		if errors.Is(err, ErrKeyAlreadyActivated) {
+			jsonResponse(w, err, http.StatusBadRequest)
+		} else {
+			log.Printf("failed to activate key: %s", err)
+			jsonResponse(w, internalServerError, http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -442,8 +449,12 @@ func (a *App) CreateApiKey(w http.ResponseWriter, r *http.Request) {
 func (a *App) RotateApiKey(w http.ResponseWriter, r *http.Request) {
 	requestBody, err := parseRotateKeyRequestBody(r.Body)
 	if err != nil {
-		log.Printf("invalid request in RotateApiKey: %s", err)
-		jsonResponse(w, invalidRequest, http.StatusBadRequest)
+		if strings.HasSuffix(err.Error(), "is required") {
+			jsonResponse(w, err, http.StatusBadRequest)
+		} else {
+			log.Printf("invalid request in RotateApiKey: %s", err)
+			jsonResponse(w, invalidRequest, http.StatusBadRequest)
+		}
 		return
 	}
 

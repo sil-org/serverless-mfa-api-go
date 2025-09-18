@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -220,7 +221,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 		name       string
 		body       any
 		wantStatus int
-		wantError  string
+		wantError  error
 	}{
 		{
 			name: "not previously activated",
@@ -237,7 +238,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 				"apiKeyValue": key2.Key,
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "failed to activate key: key already activated",
+			wantError:  ErrKeyAlreadyActivated,
 		},
 		{
 			name: "missing email",
@@ -245,7 +246,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 				"apiKeyValue": key3.Key,
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "email is required",
+			wantError:  errors.New("email is required"),
 		},
 		{
 			name: "missing apiKey",
@@ -253,7 +254,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 				"email": exampleEmail,
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "apiKeyValue is required",
+			wantError:  errors.New("apiKeyValue is required"),
 		},
 		{
 			name: "key not found",
@@ -262,7 +263,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 				"apiKeyValue": "not a key",
 			},
 			wantStatus: http.StatusNotFound,
-			wantError:  "key not found: item does not exist: not a key",
+			wantError:  errors.New("API Key not found"),
 		},
 	}
 	for _, tt := range tests {
@@ -275,7 +276,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 				ms.Equal(tt.wantStatus, res.Status, fmt.Sprintf("ActivateApiKey response: %s", res.Body))
 				var se simpleError
 				ms.decodeBody(res.Body, &se)
-				ms.Equal(tt.wantError, se.Error)
+				ms.ErrorIs(se, tt.wantError)
 				return
 			}
 
@@ -300,7 +301,7 @@ func (ms *MfaSuite) TestCreateApiKey() {
 		name       string
 		body       any
 		wantStatus int
-		wantError  string
+		wantError  error
 	}{
 		{
 			name: "success",
@@ -313,7 +314,7 @@ func (ms *MfaSuite) TestCreateApiKey() {
 			name:       "missing email",
 			body:       map[string]interface{}{},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "email is required",
+			wantError:  errors.New("email is required"),
 		},
 	}
 	for _, tt := range tests {
@@ -322,11 +323,11 @@ func (ms *MfaSuite) TestCreateApiKey() {
 			req := requestWithUser(tt.body, ApiKey{Store: localStorage})
 			ms.app.CreateApiKey(res, req)
 
-			if tt.wantError != "" {
+			if tt.wantError != nil {
 				ms.Equal(tt.wantStatus, res.Status, fmt.Sprintf("CreateApiKey response: %s", res.Body))
 				var se simpleError
 				ms.decodeBody(res.Body, &se)
-				ms.Equal(tt.wantError, se.Error)
+				ms.ErrorIs(se, tt.wantError)
 				return
 			}
 
@@ -354,7 +355,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 		name       string
 		body       any
 		wantStatus int
-		wantError  string
+		wantError  error
 	}{
 		{
 			name: "missing oldKeyId",
@@ -364,7 +365,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 				paramOldKeySecret: key.Secret,
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "invalid request: oldKeyId is required",
+			wantError:  errors.New("oldKeyId is required"),
 		},
 		{
 			name: "missing oldKeySecret",
@@ -374,7 +375,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 				paramOldKeyId:     key.Key,
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "invalid request: oldKeySecret is required",
+			wantError:  errors.New("oldKeySecret is required"),
 		},
 		{
 			name: "missing newKeyId",
@@ -384,7 +385,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 				paramOldKeySecret: key.Secret,
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "invalid request: newKeyId is required",
+			wantError:  errors.New("newKeyId is required"),
 		},
 		{
 			name: "missing newKeySecret",
@@ -394,7 +395,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 				paramOldKeySecret: key.Secret,
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "invalid request: newKeySecret is required",
+			wantError:  errors.New("newKeySecret is required"),
 		},
 		{
 			name: "good",
@@ -413,11 +414,11 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 			req := requestWithUser(tt.body, key)
 			ms.app.RotateApiKey(res, req)
 
-			if tt.wantError != "" {
+			if tt.wantError != nil {
 				ms.Equal(tt.wantStatus, res.Status, fmt.Sprintf("CreateApiKey response: %s", res.Body))
 				var se simpleError
 				ms.decodeBody(res.Body, &se)
-				ms.Equal(tt.wantError, se.Error)
+				ms.ErrorIs(se, tt.wantError)
 				return
 			}
 
