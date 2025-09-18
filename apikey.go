@@ -23,7 +23,6 @@ const ApiKeyTablePK = "value"
 
 // key rotation request parameters
 const (
-	// TODO: these should be snake case
 	paramNewKeyId     = "newKeyId"
 	paramNewKeySecret = "newKeySecret"
 	paramOldKeyId     = "oldKeyId"
