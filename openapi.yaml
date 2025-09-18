@@ -705,3 +705,34 @@ paths:
           description: Not found
         "401":
           $ref: "#/components/responses/UnauthorizedError"
+  /totp/{uuid}/validate:
+    delete:
+      summary: Validate a passcode (TOTP)
+      parameters:
+        - in: path
+          name: uuid
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the passcode.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  required: true
+                  description: >-
+                    The generated one-time password to validate against the shared secret identified by the UUID
+                    parameter.
+                  example: "123456"
+      responses:
+        "200":
+          description: The code is valid.
+        "400":
+          description: Invalid request, e.g. missing code.
+        "401":
+          description: Key is not valid or one-time code is not valid.

@@ -8,6 +8,9 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"time"
+
+	"github.com/pquerna/otp/totp"
 )
 
 func (ms *MfaSuite) TestAppCreateTOTP() {
@@ -116,24 +119,10 @@ func (ms *MfaSuite) TestNewTOTP() {
 func (ms *MfaSuite) TestAppDeleteTOTP() {
 	key := newTestKey()
 	otherKey := newTestKey()
-	totp := ms.newPasscode(key)
+	testTOTP := ms.newPasscode(key)
 
 	ctxWithAPIKey := context.WithValue(context.Background(), UserContextKey, key)
 	ctxWithOtherAPIKey := context.WithValue(context.Background(), UserContextKey, otherKey)
-
-	requestWithCorrectID := &http.Request{
-		Method: http.MethodDelete,
-		URL:    &url.URL{Path: "/totp/" + totp.UUID},
-	}
-	requestWithCorrectID = requestWithCorrectID.WithContext(ctxWithAPIKey)
-
-	requestWithWrongKey := requestWithCorrectID.WithContext(ctxWithOtherAPIKey)
-
-	requestWithWrongUUID := &http.Request{
-		Method: http.MethodDelete,
-		URL:    &url.URL{Path: "/totp/" + NewUUID()},
-	}
-	requestWithWrongUUID = requestWithWrongUUID.WithContext(ctxWithAPIKey)
 
 	mux := &http.ServeMux{}
 	mux.HandleFunc("DELETE /totp/{"+UUIDParam+"}", ms.app.DeleteTOTP)
@@ -145,17 +134,17 @@ func (ms *MfaSuite) TestAppDeleteTOTP() {
 	}{
 		{
 			name:       "wrong UUID",
-			request:    requestWithWrongUUID,
+			request:    ms.newRequest(ctxWithAPIKey, http.MethodDelete, "/totp/"+NewUUID(), ""),
 			wantStatus: http.StatusNotFound,
 		},
 		{
 			name:       "correct UUID, wrong key",
-			request:    requestWithWrongKey,
+			request:    ms.newRequest(ctxWithOtherAPIKey, http.MethodDelete, "/totp/"+testTOTP.UUID, ""),
 			wantStatus: http.StatusNotFound,
 		},
 		{
 			name:       "correct UUID, correct key",
-			request:    requestWithCorrectID,
+			request:    ms.newRequest(ctxWithAPIKey, http.MethodDelete, "/totp/"+testTOTP.UUID, ""),
 			wantStatus: http.StatusNoContent,
 		},
 	}
@@ -169,12 +158,126 @@ func (ms *MfaSuite) TestAppDeleteTOTP() {
 	}
 }
 
+func (ms *MfaSuite) TestAppValidateTOTP() {
+	key := newTestKey()
+	otherKey := newTestKey()
+	testTOTP := ms.newPasscode(key)
+
+	ctxWithAPIKey := context.WithValue(context.Background(), UserContextKey, key)
+	ctxWithOtherAPIKey := context.WithValue(context.Background(), UserContextKey, otherKey)
+
+	now := time.Now()
+	code, err := totp.GenerateCode(testTOTP.Key, now)
+	ms.NoError(err)
+
+	mux := &http.ServeMux{}
+	mux.HandleFunc("POST /totp/{"+UUIDParam+"}/validate", ms.app.ValidateTOTP)
+
+	tests := []struct {
+		name       string
+		request    *http.Request
+		wantStatus int
+	}{
+		{
+			name: "wrong UUID",
+			request: ms.newRequest(ctxWithAPIKey, http.MethodPost,
+				"/totp/"+NewUUID()+"/validate", `{"code":"`+code+`"}`),
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			name: "correct UUID, wrong key",
+			request: ms.newRequest(ctxWithOtherAPIKey, http.MethodPost,
+				"/totp/"+testTOTP.UUID+"/validate", `{"code":"`+code+`"}`),
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			name: "correct UUID, correct key, wrong code",
+			request: ms.newRequest(ctxWithAPIKey, http.MethodPost,
+				"/totp/"+testTOTP.UUID+"/validate", `{"code":"000000"}`),
+			wantStatus: http.StatusUnauthorized,
+		},
+		{
+			name: "correct UUID, correct key, correct code",
+			request: ms.newRequest(ctxWithAPIKey, http.MethodPost,
+				"/totp/"+testTOTP.UUID+"/validate", `{"code":"`+code+`"}`),
+			wantStatus: http.StatusOK,
+		},
+	}
+	for _, tt := range tests {
+		ms.Run(tt.name, func() {
+			response := httptest.NewRecorder()
+			mux.ServeHTTP(response, tt.request)
+
+			ms.Equalf(tt.wantStatus, response.Code, "incorrect http status, response body: %s", response.Body.String())
+		})
+	}
+}
+
+func (ms *MfaSuite) TestParseValidateTOTPRequestBody() {
+	tests := []struct {
+		name    string
+		body    io.ReadCloser
+		want    *ValidateTOTPRequestBody
+		wantErr string
+	}{
+		{
+			name:    "no body",
+			body:    nil,
+			want:    nil,
+			wantErr: "empty request body",
+		},
+		{
+			name:    "empty",
+			body:    io.NopCloser(strings.NewReader("")),
+			want:    nil,
+			wantErr: "invalid request: EOF",
+		},
+		{
+			name:    "missing code",
+			body:    io.NopCloser(strings.NewReader("{}")),
+			want:    nil,
+			wantErr: "code is required",
+		},
+		{
+			name: "correct",
+			body: io.NopCloser(strings.NewReader(`{"code":"000000"}`)),
+			want: &ValidateTOTPRequestBody{
+				Code: "000000",
+			},
+		},
+	}
+	for _, tt := range tests {
+		ms.Run(tt.name, func() {
+			got, err := parseValidateTOTPRequestBody(tt.body)
+			if tt.wantErr != "" {
+				ms.Error(err)
+				ms.Equal(tt.wantErr, err.Error())
+				return
+			}
+
+			ms.NoError(err)
+			ms.Equal(tt.want, got)
+		})
+	}
+}
+
+func (ms *MfaSuite) newRequest(ctx context.Context, method, path, body string) *http.Request {
+	r := &http.Request{
+		Method: method,
+		URL:    &url.URL{Path: path},
+	}
+	if body != "" {
+		r.Body = io.NopCloser(strings.NewReader(body))
+	}
+	return r.WithContext(ctx)
+}
+
 func (ms *MfaSuite) newPasscode(key ApiKey) TOTP {
-	totp := TOTP{
+	t := TOTP{
 		UUID:             NewUUID(),
 		ApiKey:           key.Key,
 		EncryptedTotpKey: mustEncryptLegacy(key, "plain text TOTP key"),
 	}
-	must(ms.app.db.Store(ms.app.GetConfig().TotpTable, totp))
-	return totp
+	must(ms.app.db.Store(ms.app.GetConfig().TotpTable, t))
+	return t
 }

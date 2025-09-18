@@ -46,6 +46,10 @@ func getRoutes(app *mfa.App) []route {
 			HandlerFunc: app.DeleteTOTP,
 		},
 		{
+			Pattern:     "POST /totp/{" + mfa.UUIDParam + "}/validate",
+			HandlerFunc: app.ValidateTOTP,
+		},
+		{
 			Pattern:     "POST /webauthn/register",
 			HandlerFunc: app.BeginRegistration,
 		},
