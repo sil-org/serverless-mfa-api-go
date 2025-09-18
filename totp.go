@@ -18,6 +18,11 @@ import (
 // TOTPTablePK is the primary key in the TOTP DynamoDB table
 const TOTPTablePK = "uuid"
 
+const (
+	notFound            = "TOTP not found"
+	internalServerError = "Internal server error"
+)
+
 // TOTP contains data to represent a Time-based One-Time Passcode (token). The ID and encrypted fields are persisted in
 // DynamoDB. The others are non-encrypted and are short-lived.
 type TOTP struct {
@@ -168,9 +173,6 @@ func newTOTP(db *Storage, apiKey ApiKey, issuer, name string) (TOTP, error) {
 
 // DeleteTOTP is the http handler to delete a passcode.
 func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
-	const notFound = "TOTP not found"
-	const internalServerError = "Internal server error"
-
 	id := r.PathValue(UUIDParam)
 
 	key, err := getAPIKey(r)
@@ -209,8 +211,6 @@ func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 
 // ValidateTOTP is the http handler to validate a passcode.
 func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
-	const notFound = "TOTP not found"
-
 	requestBody, err := parseValidateTOTPRequestBody(r.Body)
 	if err != nil {
 		log.Printf("Invalid ValidateTOTP request body: %s", err)
@@ -222,7 +222,8 @@ func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 
 	key, err := getAPIKey(r)
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("API Key not found in request context: %w", err), http.StatusInternalServerError)
+		log.Printf("API Key not found in request context: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
@@ -233,7 +234,7 @@ func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 			jsonResponse(w, notFound, http.StatusNotFound)
 		} else {
 			log.Printf("error loading TOTP: %s", err)
-			jsonResponse(w, "Internal server error", http.StatusInternalServerError)
+			jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		}
 		return
 	}
