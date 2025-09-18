@@ -74,7 +74,7 @@ func getRoutes(app *mfa.App) []route {
 			// Alternatively, if the id param indicates that a legacy U2F key should be removed
 			//	 (e.g. by matching the string "u2f")
 			//   then that user is saved with all of its legacy u2f fields blanked out.
-			Pattern:     "DELETE /webauthn/credential/{" + mfa.IDParam + "}/",
+			Pattern:     "DELETE /webauthn/credential/{" + mfa.IDParam + "}",
 			HandlerFunc: app.DeleteCredential,
 		},
 	}
