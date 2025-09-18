@@ -83,7 +83,8 @@ func (a *App) CreateTOTP(w http.ResponseWriter, r *http.Request) {
 
 	apiKey, err := getAPIKey(r)
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("API Key not found in request context: %w", err), http.StatusInternalServerError)
+		log.Printf("CreateTOTP API key error: %v", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
@@ -177,7 +178,7 @@ func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 
 	key, err := getAPIKey(r)
 	if err != nil {
-		log.Printf("API Key not found in request context: %s", err)
+		log.Printf("DeleteTOTP API key error: %v", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
@@ -222,7 +223,7 @@ func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 
 	key, err := getAPIKey(r)
 	if err != nil {
-		log.Printf("API Key not found in request context: %s", err)
+		log.Printf("ValidateTOTP API key error: %v", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
