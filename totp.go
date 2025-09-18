@@ -104,12 +104,13 @@ func (a *App) CreateTOTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // parseCreateTOTPRequestBody parses and validates the CreateTOTP request body
-func parseCreateTOTPRequestBody(body io.ReadCloser) (requestBody *CreateTOTPRequestBody, err error) {
+func parseCreateTOTPRequestBody(body io.ReadCloser) (*CreateTOTPRequestBody, error) {
 	if body == nil {
 		return nil, fmt.Errorf("empty request body")
 	}
 
-	err = json.NewDecoder(body).Decode(&requestBody)
+	requestBody := &CreateTOTPRequestBody{}
+	err := json.NewDecoder(body).Decode(&requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("invalid request: %w", err)
 	}
@@ -255,12 +256,13 @@ func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // parseValidateTOTPRequestBody parses and validates the ValidateTOTP request body
-func parseValidateTOTPRequestBody(body io.ReadCloser) (requestBody *ValidateTOTPRequestBody, err error) {
+func parseValidateTOTPRequestBody(body io.ReadCloser) (*ValidateTOTPRequestBody, error) {
 	if body == nil {
 		return nil, fmt.Errorf("empty request body")
 	}
 
-	err = json.NewDecoder(body).Decode(&requestBody)
+	requestBody := &ValidateTOTPRequestBody{}
+	err := json.NewDecoder(body).Decode(&requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("invalid request: %w", err)
 	}
