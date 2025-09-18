@@ -163,12 +163,14 @@ func newTOTP(db *Storage, apiKey ApiKey, issuer, name string) (TOTP, error) {
 // DeleteTOTP is the http handler to delete a passcode.
 func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 	const notFound = "TOTP not found"
+	const internalServerError = "Internal server error"
 
 	id := r.PathValue(UUIDParam)
 
 	key, err := getAPIKey(r)
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("API Key not found in request context: %w", err), http.StatusInternalServerError)
+		log.Printf("API Key not found in request context: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
@@ -179,7 +181,7 @@ func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 			jsonResponse(w, notFound, http.StatusNotFound)
 		} else {
 			log.Printf("error loading TOTP: %s", err)
-			jsonResponse(w, "Internal server error", http.StatusInternalServerError)
+			jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		}
 		return
 	}
