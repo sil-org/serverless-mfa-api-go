@@ -42,25 +42,6 @@ func main() {
 	lambda.Start(handler)
 }
 
-func credentialToDelete(req events.APIGatewayProxyRequest) (string, bool) {
-	if strings.ToLower(req.HTTPMethod) != `delete` {
-		return "", false
-	}
-
-	path := req.Path
-	if !strings.HasPrefix(path, "/webauthn/credential/") {
-		return "", false
-	}
-
-	parts := strings.Split(path, `/`)
-	if len(parts) != 4 {
-		return "", false
-	}
-
-	credID := parts[3]
-	return credID, true
-}
-
 func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	r := httpRequestFromProxyRequest(ctx, req)
 	w := newLambdaResponseWriter()
