@@ -112,7 +112,7 @@ func parseCreateTOTPRequestBody(body io.ReadCloser) (*CreateTOTPRequestBody, err
 	}
 
 	requestBody := &CreateTOTPRequestBody{}
-	err := json.NewDecoder(body).Decode(&requestBody)
+	err := json.NewDecoder(body).Decode(requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("invalid request: %w", err)
 	}
@@ -272,7 +272,7 @@ func parseValidateTOTPRequestBody(body io.ReadCloser) (*ValidateTOTPRequestBody,
 	}
 
 	requestBody := &ValidateTOTPRequestBody{}
-	err := json.NewDecoder(body).Decode(&requestBody)
+	err := json.NewDecoder(body).Decode(requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("invalid request: %w", err)
 	}
