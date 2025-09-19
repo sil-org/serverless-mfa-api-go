@@ -123,8 +123,8 @@ func getPrivateKey() *ecdsa.PrivateKey {
 // and also returns the private key
 func GetAuthDataAndPrivateKey(rpID, keyHandle string) (authDataStr string, authData []byte, privateKey *ecdsa.PrivateKey) {
 	// Add in the RP ID Hash (32 bytes)
-	RPIDHash := sha256.Sum256([]byte(rpID))
-	for _, r := range RPIDHash {
+	hash := sha256.Sum256([]byte(rpID))
+	for _, r := range hash {
 		authData = append(authData, r)
 	}
 
