@@ -19,8 +19,9 @@ import (
 const TOTPTablePK = "uuid"
 
 const (
-	notFound            = "TOTP not found"
 	internalServerError = "Internal server error"
+	invalidRequest      = "Invalid request"
+	totpNotFound        = "TOTP not found"
 )
 
 // TOTP contains data to represent a Time-based One-Time Passcode (token). The ID and encrypted fields are persisted in
@@ -77,7 +78,7 @@ func (a *App) CreateTOTP(w http.ResponseWriter, r *http.Request) {
 	requestBody, err := parseCreateTOTPRequestBody(r.Body)
 	if err != nil {
 		log.Println("Invalid CreateTOTP request body:", err)
-		jsonResponse(w, "Invalid request", http.StatusBadRequest)
+		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
 
@@ -90,7 +91,8 @@ func (a *App) CreateTOTP(w http.ResponseWriter, r *http.Request) {
 
 	t, err := newTOTP(a.db, apiKey, requestBody.Issuer, requestBody.Name)
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("failed to create a new TOTP: %w", err), http.StatusInternalServerError)
+		log.Printf("failed to create a new TOTP: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
@@ -188,7 +190,7 @@ func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 	err = a.db.Load(envConfig.TotpTable, TOTPTablePK, id, &t)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
-			jsonResponse(w, notFound, http.StatusNotFound)
+			jsonResponse(w, totpNotFound, http.StatusNotFound)
 		} else {
 			log.Printf("error loading TOTP: %s", err)
 			jsonResponse(w, internalServerError, http.StatusInternalServerError)
@@ -197,7 +199,7 @@ func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if key.Key != t.ApiKey {
-		jsonResponse(w, notFound, http.StatusNotFound)
+		jsonResponse(w, totpNotFound, http.StatusNotFound)
 		return
 	}
 
@@ -216,7 +218,7 @@ func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 	requestBody, err := parseValidateTOTPRequestBody(r.Body)
 	if err != nil {
 		log.Printf("Invalid ValidateTOTP request body: %s", err)
-		jsonResponse(w, "Invalid request", http.StatusBadRequest)
+		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
 
@@ -233,7 +235,7 @@ func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 	err = a.db.Load(envConfig.TotpTable, TOTPTablePK, id, &t)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
-			jsonResponse(w, notFound, http.StatusNotFound)
+			jsonResponse(w, totpNotFound, http.StatusNotFound)
 		} else {
 			log.Printf("error loading TOTP: %s", err)
 			jsonResponse(w, internalServerError, http.StatusInternalServerError)
@@ -242,7 +244,7 @@ func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if key.Key != t.ApiKey {
-		jsonResponse(w, notFound, http.StatusNotFound)
+		jsonResponse(w, totpNotFound, http.StatusNotFound)
 		return
 	}
 

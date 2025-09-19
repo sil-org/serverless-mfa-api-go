@@ -2,6 +2,7 @@ package mfa
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -16,13 +17,17 @@ const (
 
 // simpleError is a custom error type that can be JSON-encoded for API responses
 type simpleError struct {
-	Error string `json:"error"`
+	Err string `json:"error"`
 }
 
 // newSimpleError creates a new simpleError from the given error
-func newSimpleError(err error) simpleError {
-	return simpleError{Error: err.Error()}
-}
+func newSimpleError(err error) simpleError { return simpleError{Err: err.Error()} }
+
+// Error satisfies the error interface.
+func (s simpleError) Error() string { return s.Err }
+
+// Is returns true if the error strings are equal.
+func (s simpleError) Is(err error) bool { return s.Err == err.Error() || errors.Is(err, simpleError{}) }
 
 // jsonResponse encodes a body as JSON and writes it to the response. It sets the response Content-Type header to
 // "application/json".
@@ -31,6 +36,8 @@ func jsonResponse(w http.ResponseWriter, body interface{}, status int) {
 	switch b := body.(type) {
 	case error:
 		data = newSimpleError(b)
+	case string:
+		data = newSimpleError(errors.New(b))
 	default:
 		data = body
 	}
@@ -56,7 +63,7 @@ func jsonResponse(w http.ResponseWriter, body interface{}, status int) {
 	w.WriteHeader(status)
 	_, err = w.Write(jBody)
 	if err != nil {
-		log.Printf("failed to write response in jsonResponse: %s\n", err)
+		log.Printf("failed to write response in jsonResponse: %s", err)
 	}
 }
 
