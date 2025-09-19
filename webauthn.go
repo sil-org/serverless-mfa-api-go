@@ -197,6 +197,9 @@ func (a *App) DeleteCredential(w http.ResponseWriter, r *http.Request) {
 		jsonResponse(w, "Not found", status)
 	case http.StatusInternalServerError:
 		jsonResponse(w, internalServerError, status)
+	default:
+		log.Printf("unexpected status code (%d)", status)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 	}
 }
 

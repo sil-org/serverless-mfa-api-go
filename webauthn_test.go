@@ -172,7 +172,7 @@ func (ms *MfaSuite) Test_BeginRegistration() {
 			httpWriter: newLambdaResponseWriter(),
 			httpReq:    http.Request{},
 			wantBodyContains: []string{
-				`"error":"Internal server error"`,
+				`"error":"` + internalServerError + `"}`,
 			},
 		},
 		{
@@ -311,13 +311,13 @@ func (ms *MfaSuite) Test_FinishRegistration() {
 		{
 			name:             "no user",
 			httpReq:          http.Request{},
-			wantBodyContains: []string{`"error":"Internal server error"`},
+			wantBodyContains: []string{`"error":"` + internalServerError + `"}`},
 		},
 		{
 			name:    "request has no body",
 			httpReq: reqNoBody,
 			wantBodyContains: []string{
-				`"error":"Invalid request"`,
+				`"error":"` + invalidRequest + `"}`,
 			},
 		},
 		{
@@ -479,13 +479,13 @@ func (ms *MfaSuite) Test_BeginLogin() {
 			name:             "no user",
 			httpWriter:       newLambdaResponseWriter(),
 			httpReq:          http.Request{},
-			wantBodyContains: []string{`"error":"Internal server error"`},
+			wantBodyContains: []string{`"error":"` + internalServerError + `"}`},
 		},
 		{
 			name:             "has a user but no credentials",
 			httpWriter:       newLambdaResponseWriter(),
 			httpReq:          reqNoCredentials,
-			wantBodyContains: []string{`"error":"Invalid request"`},
+			wantBodyContains: []string{`"error":"` + invalidRequest + `"}`},
 		},
 		{
 			name:       "has a user with credentials",
@@ -656,7 +656,7 @@ func (ms *MfaSuite) Test_FinishLogin() {
 		{
 			name:             "no user",
 			httpReq:          http.Request{},
-			wantBodyContains: []string{`"error":"Internal server error"`},
+			wantBodyContains: []string{`"error":"` + internalServerError + `"}`},
 		},
 		{
 			name:    "with first credential",

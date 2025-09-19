@@ -27,7 +27,7 @@ func newSimpleError(err error) simpleError { return simpleError{Err: err.Error()
 func (s simpleError) Error() string { return s.Err }
 
 // Is returns true if the error strings are equal.
-func (s simpleError) Is(err error) bool { return s.Err == err.Error() }
+func (s simpleError) Is(err error) bool { return s.Err == err.Error() || errors.Is(err, simpleError{}) }
 
 // jsonResponse encodes a body as JSON and writes it to the response. It sets the response Content-Type header to
 // "application/json".
