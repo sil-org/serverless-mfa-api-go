@@ -2,9 +2,8 @@
 *
 
 # Whitelist required files
-!.env.encrypted
-!scripts/*
 !lambda/*
+!router/*
 !server/*
 !u2fsimulator/*
 !u2fserver/*

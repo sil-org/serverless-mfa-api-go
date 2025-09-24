@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -190,9 +190,11 @@ func (ms *MfaSuite) TestApiKeyActivate() {
 			}
 
 			ms.NoError(err)
-			ms.Regexp(regexp.MustCompile("[A-Za-z0-9+/]{43}="), key.Secret)
-			ms.NoError(bcrypt.CompareHashAndPassword([]byte(key.HashedSecret), []byte(key.Secret)))
-			ms.WithinDuration(time.Now(), time.Unix(int64(key.ActivatedAt/1000), 0), time.Minute)
+			ms.Regexp(regexp.MustCompile("^[A-Za-z0-9+/]{43}=$"), key.Secret, "Secret isn't correct")
+			ms.NoError(bcrypt.CompareHashAndPassword([]byte(key.HashedSecret), []byte(key.Secret)),
+				"HashedSecret isn't correct")
+			ms.WithinDuration(time.Now(), time.Unix(int64(key.ActivatedAt/1000), 0), time.Minute,
+				"ActivatedAt isn't set to the current time")
 
 			// ensure no other fields were changed
 			ms.Equal(tt.key.Key, key.Key)
@@ -219,7 +221,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 		name       string
 		body       any
 		wantStatus int
-		wantError  string
+		wantError  error
 	}{
 		{
 			name: "not previously activated",
@@ -236,7 +238,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 				"apiKeyValue": key2.Key,
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "failed to activate key: key already activated",
+			wantError:  ErrKeyAlreadyActivated,
 		},
 		{
 			name: "missing email",
@@ -244,7 +246,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 				"apiKeyValue": key3.Key,
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "email is required",
+			wantError:  errors.New("email is required"),
 		},
 		{
 			name: "missing apiKey",
@@ -252,7 +254,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 				"email": exampleEmail,
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "apiKeyValue is required",
+			wantError:  errors.New("apiKeyValue is required"),
 		},
 		{
 			name: "key not found",
@@ -261,7 +263,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 				"apiKeyValue": "not a key",
 			},
 			wantStatus: http.StatusNotFound,
-			wantError:  "key not found: item does not exist: not a key",
+			wantError:  errors.New("API Key not found"),
 		},
 	}
 	for _, tt := range tests {
@@ -274,7 +276,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 				ms.Equal(tt.wantStatus, res.Status, fmt.Sprintf("ActivateApiKey response: %s", res.Body))
 				var se simpleError
 				ms.decodeBody(res.Body, &se)
-				ms.Equal(tt.wantError, se.Error)
+				ms.ErrorIs(se, tt.wantError)
 				return
 			}
 
@@ -299,7 +301,7 @@ func (ms *MfaSuite) TestCreateApiKey() {
 		name       string
 		body       any
 		wantStatus int
-		wantError  string
+		wantError  error
 	}{
 		{
 			name: "success",
@@ -312,7 +314,7 @@ func (ms *MfaSuite) TestCreateApiKey() {
 			name:       "missing email",
 			body:       map[string]interface{}{},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "email is required",
+			wantError:  errors.New("email is required"),
 		},
 	}
 	for _, tt := range tests {
@@ -321,11 +323,11 @@ func (ms *MfaSuite) TestCreateApiKey() {
 			req := requestWithUser(tt.body, ApiKey{Store: localStorage})
 			ms.app.CreateApiKey(res, req)
 
-			if tt.wantError != "" {
+			if tt.wantError != nil {
 				ms.Equal(tt.wantStatus, res.Status, fmt.Sprintf("CreateApiKey response: %s", res.Body))
 				var se simpleError
 				ms.decodeBody(res.Body, &se)
-				ms.Equal(tt.wantError, se.Error)
+				ms.ErrorIs(se, tt.wantError)
 				return
 			}
 
@@ -344,23 +346,16 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 	key := user.ApiKey
 	must(db.Store(config.ApiKeyTable, key))
 
-	totp := TOTP{
-		UUID:             uuid.NewV4().String(),
-		ApiKey:           key.Key,
-		EncryptedTotpKey: mustEncryptLegacy(key, "plain text TOTP key"),
-	}
-	must(db.Store(ms.app.GetConfig().TotpTable, totp))
+	totp := ms.newPasscode(key)
 
-	newKey, err := NewApiKey("email@example.com")
-	must(err)
-	must(newKey.Activate())
+	newKey := newTestKey()
 	must(db.Store(config.ApiKeyTable, newKey))
 
 	tests := []struct {
 		name       string
 		body       any
 		wantStatus int
-		wantError  string
+		wantError  error
 	}{
 		{
 			name: "missing oldKeyId",
@@ -370,7 +365,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 				paramOldKeySecret: key.Secret,
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "invalid request: oldKeyId is required",
+			wantError:  errors.New("oldKeyId is required"),
 		},
 		{
 			name: "missing oldKeySecret",
@@ -380,7 +375,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 				paramOldKeyId:     key.Key,
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "invalid request: oldKeySecret is required",
+			wantError:  errors.New("oldKeySecret is required"),
 		},
 		{
 			name: "missing newKeyId",
@@ -390,7 +385,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 				paramOldKeySecret: key.Secret,
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "invalid request: newKeyId is required",
+			wantError:  errors.New("newKeyId is required"),
 		},
 		{
 			name: "missing newKeySecret",
@@ -400,7 +395,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 				paramOldKeySecret: key.Secret,
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "invalid request: newKeySecret is required",
+			wantError:  errors.New("newKeySecret is required"),
 		},
 		{
 			name: "good",
@@ -419,11 +414,11 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 			req := requestWithUser(tt.body, key)
 			ms.app.RotateApiKey(res, req)
 
-			if tt.wantError != "" {
+			if tt.wantError != nil {
 				ms.Equal(tt.wantStatus, res.Status, fmt.Sprintf("CreateApiKey response: %s", res.Body))
 				var se simpleError
 				ms.decodeBody(res.Body, &se)
-				ms.Equal(tt.wantError, se.Error)
+				ms.ErrorIs(se, tt.wantError)
 				return
 			}
 
@@ -448,7 +443,10 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 func (ms *MfaSuite) TestNewApiKey() {
 	got, err := NewApiKey(exampleEmail)
 	ms.NoError(err)
-	ms.Regexp(regexp.MustCompile("[a-f0-9]{40}"), got)
+	ms.Equal(exampleEmail, got.Email, "Email isn't correct")
+	ms.Regexp(regexp.MustCompile("^[a-f0-9]{40}$"), got.Key, "Key isn't correct")
+	ms.WithinDuration(time.Now(), time.Unix(int64(got.CreatedAt)/1000, 0), time.Minute,
+		"CreatedAt isn't set to the current time")
 }
 
 func (ms *MfaSuite) TestNewCipherBlock() {
@@ -510,11 +508,7 @@ func (ms *MfaSuite) TestApiKey_ReEncryptTOTPs() {
 	must(newKey.Activate())
 	must(ms.app.GetDB().Store(ms.app.GetConfig().ApiKeyTable, newKey))
 
-	must(storage.Store(ms.app.GetConfig().TotpTable, TOTP{
-		UUID:             uuid.NewV4().String(),
-		ApiKey:           oldKey.Key,
-		EncryptedTotpKey: mustEncryptLegacy(oldKey, "plain text TOTP key"),
-	}))
+	_ = ms.newPasscode(oldKey)
 
 	complete, incomplete, err := newKey.ReEncryptTOTPs(storage, oldKey)
 	ms.NoError(err)
@@ -531,9 +525,7 @@ func (ms *MfaSuite) TestReEncryptWebAuthnUsers() {
 	baseConfigs := getDBConfig(ms)
 	users := getTestWebauthnUsers(ms, baseConfigs)
 
-	newKey, err := NewApiKey("email@example.com")
-	must(err)
-	must(newKey.Activate())
+	newKey := newTestKey()
 	must(ms.app.GetDB().Store(ms.app.GetConfig().ApiKeyTable, newKey))
 
 	complete, incomplete, err := newKey.ReEncryptWebAuthnUsers(storage, users[0].ApiKey)
@@ -577,9 +569,7 @@ func (ms *MfaSuite) TestReEncryptWebAuthnUser() {
 	}
 	for _, tt := range tests {
 		ms.Run(tt.name, func() {
-			newKey, err := NewApiKey("email@example.com")
-			must(err)
-			must(newKey.Activate())
+			newKey := newTestKey()
 			must(ms.app.GetDB().Store(ms.app.GetConfig().ApiKeyTable, newKey))
 			ms.NotEqual(newKey.Secret, tt.user.ApiKey.Secret)
 
@@ -672,4 +662,11 @@ func (ms *MfaSuite) TestApiKeyReEncryptLegacy() {
 	after, err := newKey.DecryptLegacy(newCiphertext)
 	ms.NoError(err)
 	ms.Equal(plaintext, after)
+}
+
+func newTestKey() ApiKey {
+	apiKey, err := NewApiKey("user@example.com")
+	must(err)
+	must(apiKey.Activate())
+	return apiKey
 }

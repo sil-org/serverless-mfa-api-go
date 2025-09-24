@@ -1,4 +1,4 @@
-* @silinternational/developers
-*.tf @silinternational/tf-devs
-*.go @silinternational/go-devs
-go.* @silinternational/go-devs
+* @sil-org/developers
+*.tf @sil-org/tf-devs
+*.go @sil-org/go-devs
+go.* @sil-org/go-devs

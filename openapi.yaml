@@ -629,9 +629,123 @@ paths:
 
   /webauthn/credential/{id}:
     delete:
-      summary: Delete Credential (not currently supported in the Lambda implementation)
+      summary: Delete Credential
+      description: >-
+        DeleteCredential removes a single passkey identified by the id parameter, which is the `key_handle_hash`
+        returned by the Finish Registration endpoint.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: >-
+            The unique identifier for the credential. It is the `key_handle_hash` value returned by the 
+            Finish Registration endpoint. If the id is the fixed string "u2f" the legacy U2F data is removed from the
+            record.
       responses:
         204:
           description: Success
         401:
           $ref: "#/components/responses/UnauthorizedError"
+
+  /totp:
+    post:
+      summary: Create a new passcode (TOTP)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                issuer:
+                  type: string
+                  description: >-
+                    The name of the service/website for which the user is setting up this TOTP account.
+                  required: true
+                  example: "SIL IdP"
+                label:
+                  type: string
+                  description: A name for the user's account (such as their username).
+                  required: false
+                  example: "john_smith@example.com"
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uuid:
+                    type: string
+                    description: The unique identifier for the passcode.
+                    example: "aaaaaaaa-1111-aaaa-1111-aaaaaaaaaaaa"
+                  totpKey:
+                    type: string
+                    description: The passcode secret key.
+                    example: "0123456789ABCDEF0123456789ABCDEF"
+                  imageUrl:
+                    type: string
+                    description: >-
+                      ImageURL is a base64-encoded image in data URL format like "data:image/png;base64,iVBORw0KGgo...". 
+                      The image is a QR code that contains the OTPAuthURL, which the user scans to store the shared 
+                      secret key and metadata in their authenticator app.
+                    example: "data:image/png;base64,iVBORw0KGgo..."
+                  otpAuthUrl:
+                    type: string
+                    description: >-
+                      OTPAuthURL is an otpauth URI that contains the passcode secret key. It may also contain metadata 
+                      like issuer, algorithm, and number of digits.
+                    example: "otpauth://totp/idp:john_smith?secret=0123456789ABCDEF0123456789ABCDEF&issuer=SIL%20IdP"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+  /totp/{uuid}:
+    delete:
+      summary: Delete a passcode (TOTP)
+      parameters:
+        - in: path
+          name: uuid
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the passcode.
+      responses:
+        "204":
+          description: Success
+        "404":
+          description: Not found
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+  /totp/{uuid}/validate:
+    delete:
+      summary: Validate a passcode (TOTP)
+      parameters:
+        - in: path
+          name: uuid
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the passcode.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  required: true
+                  description: >-
+                    The generated one-time password to validate against the shared secret identified by the UUID
+                    parameter.
+                  example: "123456"
+      responses:
+        "200":
+          description: The code is valid.
+        "400":
+          description: Invalid request, e.g. missing code.
+        "401":
+          description: Key is not valid or one-time code is not valid.

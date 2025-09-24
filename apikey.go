@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -27,6 +28,14 @@ const (
 	paramOldKeyId     = "oldKeyId"
 	paramOldKeySecret = "oldKeySecret"
 )
+
+const (
+	apiKeyIsRequired = "apiKeyValue is required"
+	apiKeyNotFound   = "API Key not found"
+	emailIsRequired  = "email is required"
+)
+
+var ErrKeyAlreadyActivated = errors.New("key already activated")
 
 // ApiKey holds API key data from DynamoDB
 type ApiKey struct {
@@ -76,7 +85,8 @@ func (k *ApiKey) IsCorrect(given string) error {
 
 	err := bcrypt.CompareHashAndPassword([]byte(k.HashedSecret), []byte(given))
 	if err != nil {
-		return err
+		return fmt.Errorf("hash does not match plaintext (hash: %s) (plaintext: %v...): %w",
+			k.HashedSecret, given[0:min(len(given), 4)], err)
 	}
 
 	return nil
@@ -169,14 +179,12 @@ func (k *ApiKey) DecryptLegacy(ciphertext string) (string, error) {
 
 	iv, err := base64.StdEncoding.DecodeString(parts[0])
 	if err != nil {
-		fmt.Printf("failed to decode iv: %s\n", err)
-		return "", err
+		return "", fmt.Errorf("failed to decode iv: %w", err)
 	}
 
 	decodedCipher, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
-		fmt.Printf("failed to decode ciphertext: %s\n", err)
-		return "", err
+		return "", fmt.Errorf("failed to decode ciphertext: %w", err)
 	}
 
 	// plaintext will hold decrypted content, it must be at least as long
@@ -194,7 +202,7 @@ func (k *ApiKey) DecryptLegacy(ciphertext string) (string, error) {
 // ActivatedAt fields.
 func (k *ApiKey) Activate() error {
 	if k.ActivatedAt != 0 {
-		return errors.New("key already activated")
+		return ErrKeyAlreadyActivated
 	}
 
 	random := make([]byte, 32)
@@ -349,36 +357,48 @@ func (a *App) ActivateApiKey(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("invalid request: %w", err), http.StatusBadRequest)
+		log.Printf("invalid request in ActivateApiKey: %s", err)
+		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
 
 	if requestBody.ApiKeyValue == "" {
-		jsonResponse(w, fmt.Errorf("apiKeyValue is required"), http.StatusBadRequest)
+		jsonResponse(w, apiKeyIsRequired, http.StatusBadRequest)
 		return
 	}
 
 	if requestBody.Email == "" {
-		jsonResponse(w, fmt.Errorf("email is required"), http.StatusBadRequest)
+		jsonResponse(w, emailIsRequired, http.StatusBadRequest)
 		return
 	}
 
 	newKey := ApiKey{Key: requestBody.ApiKeyValue, Store: a.db}
 	err = newKey.Load()
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("key not found: %w", err), http.StatusNotFound)
+		if strings.Contains(err.Error(), "does not exist") {
+			jsonResponse(w, apiKeyNotFound, http.StatusNotFound)
+		} else {
+			log.Printf("error loading API Key: %s", err)
+			jsonResponse(w, internalServerError, http.StatusInternalServerError)
+		}
 		return
 	}
 
 	err = newKey.Activate()
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("failed to activate key: %w", err), http.StatusBadRequest)
+		if errors.Is(err, ErrKeyAlreadyActivated) {
+			jsonResponse(w, err, http.StatusBadRequest)
+		} else {
+			log.Printf("failed to activate key: %s", err)
+			jsonResponse(w, internalServerError, http.StatusInternalServerError)
+		}
 		return
 	}
 
 	err = newKey.Save()
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("failed to save key: %w", err), http.StatusInternalServerError)
+		log.Printf("failed to save key: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
@@ -393,25 +413,28 @@ func (a *App) CreateApiKey(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("invalid request: %w", err), http.StatusBadRequest)
+		log.Printf("invalid request in CreateApiKey: %s", err)
+		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
 
 	if requestBody.Email == "" {
-		jsonResponse(w, fmt.Errorf("email is required"), http.StatusBadRequest)
+		jsonResponse(w, emailIsRequired, http.StatusBadRequest)
 		return
 	}
 
 	key, err := NewApiKey(requestBody.Email)
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("failed to create a random key: %w", err), http.StatusInternalServerError)
+		log.Printf("failed to create a random key: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
 	key.Store = a.db
 	err = key.Save()
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("failed to save key: %w", err), http.StatusInternalServerError)
+		log.Printf("failed to save key: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
@@ -425,33 +448,42 @@ func (a *App) CreateApiKey(w http.ResponseWriter, r *http.Request) {
 func (a *App) RotateApiKey(w http.ResponseWriter, r *http.Request) {
 	requestBody, err := parseRotateKeyRequestBody(r.Body)
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("invalid request: %w", err), http.StatusBadRequest)
+		if strings.HasSuffix(err.Error(), "is required") {
+			jsonResponse(w, err, http.StatusBadRequest)
+		} else {
+			log.Printf("invalid request in RotateApiKey: %s", err)
+			jsonResponse(w, invalidRequest, http.StatusBadRequest)
+		}
 		return
 	}
 
 	oldKey := ApiKey{Key: requestBody[paramOldKeyId], Store: a.GetDB()}
 	err = oldKey.loadAndCheck(requestBody[paramOldKeySecret])
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("old key is not valid: %w", err), http.StatusNotFound)
+		log.Printf("old key is not valid: %s", err)
+		jsonResponse(w, apiKeyNotFound, http.StatusNotFound)
 		return
 	}
 
 	newKey := ApiKey{Key: requestBody[paramNewKeyId], Store: a.GetDB()}
 	err = newKey.loadAndCheck(requestBody[paramNewKeySecret])
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("new key is not valid: %w", err), http.StatusNotFound)
+		log.Printf("new key is not valid: %s", err)
+		jsonResponse(w, apiKeyNotFound, http.StatusNotFound)
 		return
 	}
 
 	totpComplete, totpIncomplete, err := newKey.ReEncryptTOTPs(a.GetDB(), oldKey)
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("failed to re-encrypt TOTP data: %w", err), http.StatusInternalServerError)
+		log.Printf("failed to re-encrypt TOTP data: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
 	webauthnComplete, webauthnIncomplete, err := newKey.ReEncryptWebAuthnUsers(a.GetDB(), oldKey)
 	if err != nil {
-		jsonResponse(w, fmt.Errorf("failed to re-encrypt WebAuthn data: %w", err), http.StatusInternalServerError)
+		log.Printf("failed to re-encrypt WebAuthn data: %s", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
