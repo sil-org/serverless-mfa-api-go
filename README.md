@@ -108,7 +108,7 @@ test the server and Lambda implementations locally.
 #### HTTP
 
 If HTTPS is not needed, simply start the `app` container and exercise the API using localhost and the Docker port
-defined in docker-compose.yml (currently 8161).
+defined in compose.yaml (currently 8161).
 
 #### HTTPS
 
