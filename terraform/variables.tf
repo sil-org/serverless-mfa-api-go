@@ -58,5 +58,5 @@ variable "app_environment" {
 variable "app_name_tag" {
   description = "app name to use for the itse_app_name tag"
   type        = string
-  default     = "idp"
+  default     = "mfa-api"
 }
