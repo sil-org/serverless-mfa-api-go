@@ -24,19 +24,19 @@ const (
 	totpNotFound        = "TOTP not found"
 )
 
-// TOTP contains data to represent a Time-based One-Time Passcode (token). The ID and encrypted fields are persisted in
+// TOTP contains data to represent a Time-based One-Time Password (token). The ID and encrypted fields are persisted in
 // DynamoDB. The others are non-encrypted and are short-lived.
 type TOTP struct {
-	// UUID is the unique ID and primary key for the passcode.
+	// UUID is the unique ID and primary key for the password.
 	UUID string `dynamodbav:"uuid" json:"uuid"`
 
-	// ApiKey is the ID of the API Key used to create and access this passcode.
+	// ApiKey is the ID of the API Key used to create and access this password.
 	ApiKey string `dynamodbav:"apiKey" json:"apiKey"`
 
-	// EncryptedTotpKey is the encrypted form of the key of the passcode.
+	// EncryptedTotpKey is the encrypted form of the key of the password.
 	EncryptedTotpKey string `dynamodbav:"encryptedTotpKey" json:"encryptedTotpKey"`
 
-	// Key is the passcode secret key.
+	// Key is the password secret key.
 	Key string `dynamodbav:"-" json:"-"`
 
 	// ImageURL is a base64-encoded image in data URL format like "data:image/png;base64,iVBORw0KGgo...". The image
@@ -45,7 +45,7 @@ type TOTP struct {
 	ImageURL string `dynamodbav:"-" json:"-"`
 
 	// OTPAuthURL is a otpauth URI like "otpauth://totp/idp:john_doe?secret=G5KFM3LNJ5NWQP3O&issuer=idp" that contains
-	// the passcode secret key. It may also contain metadata like issuer, algorithm, and number of digits.
+	// the password secret key. It may also contain metadata like issuer, algorithm, and number of digits.
 	OTPAuthURL string `dynamodbav:"-" json:"-"`
 }
 
@@ -73,7 +73,7 @@ type ValidateTOTPRequestBody struct {
 	Code string `json:"code"`
 }
 
-// CreateTOTP is the http handler to create a new TOTP passcode.
+// CreateTOTP is the http handler to create a new TOTP.
 func (a *App) CreateTOTP(w http.ResponseWriter, r *http.Request) {
 	requestBody, err := parseCreateTOTPRequestBody(r.Body)
 	if err != nil {
@@ -128,7 +128,7 @@ func parseCreateTOTPRequestBody(body io.ReadCloser) (*CreateTOTPRequestBody, err
 	return requestBody, nil
 }
 
-// newTOTP creates a new TOTP passcode
+// newTOTP creates a new TOTP
 func newTOTP(db *Storage, apiKey ApiKey, issuer, name string) (TOTP, error) {
 	key, err := totp.Generate(totp.GenerateOpts{
 		Issuer:      issuer,
@@ -175,7 +175,7 @@ func newTOTP(db *Storage, apiKey ApiKey, issuer, name string) (TOTP, error) {
 	return t, nil
 }
 
-// DeleteTOTP is the http handler to delete a passcode.
+// DeleteTOTP is the http handler to delete a password.
 func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue(UUIDParam)
 
@@ -213,7 +213,7 @@ func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, nil, http.StatusNoContent)
 }
 
-// ValidateTOTP is the http handler to validate a passcode.
+// ValidateTOTP is the http handler to validate a password.
 func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 	requestBody, err := parseValidateTOTPRequestBody(r.Body)
 	if err != nil {
