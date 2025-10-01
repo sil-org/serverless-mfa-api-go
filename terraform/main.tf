@@ -8,7 +8,7 @@ data "aws_caller_identity" "this" {}
 
 # CDK IAM user
 resource "aws_iam_user" "cdk" {
-  name = "${var.app_name}-cdk"
+  name = "${var.app_name}-${var.app_env}-cdk"
 }
 
 resource "aws_iam_access_key" "cdk" {
@@ -16,7 +16,7 @@ resource "aws_iam_access_key" "cdk" {
 }
 
 resource "aws_iam_policy" "cdk" {
-  name        = "${var.app_name}-cdk"
+  name        = "${var.app_name}-${var.app_env}-cdk"
   description = "CDK deployment policy"
 
   policy = jsonencode({
@@ -74,11 +74,11 @@ data "template_file" "lambdaRolePolicy" {
     aws_account = local.aws_account
     app_name    = var.app_name
     app_env     = var.app_env
-    table_arns = join(",", [
-      aws_dynamodb_table.api_key.arn,
-      aws_dynamodb_table.totp.arn,
-      aws_dynamodb_table.webauthn.arn,
-    ])
+    table_arns = join(",", compact([
+      "\"arn:aws:dynamodb:*:${local.aws_account}:table/${aws_dynamodb_table.api_key.name}\"",
+      "\"arn:aws:dynamodb:*:${local.aws_account}:table/${aws_dynamodb_table.webauthn.name}\"",
+      "\"arn:aws:dynamodb:*:${local.aws_account}:table/${aws_dynamodb_table.totp.name}\"",
+    ]))
   }
 }
 
