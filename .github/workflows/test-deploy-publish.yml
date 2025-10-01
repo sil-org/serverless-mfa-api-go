@@ -94,6 +94,7 @@ jobs:
           WEBAUTHN_TABLE: ${{ vars.WEBAUTHN_TABLE }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          SENTRY_DSN: ${{ vars.SENTRY_DSN }}
         run: cd cdk && cdk deploy --require-approval never
 
   build-and-publish:

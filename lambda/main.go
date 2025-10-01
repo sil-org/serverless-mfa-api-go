@@ -8,9 +8,11 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/getsentry/sentry-go"
 	"github.com/kelseyhightower/envconfig"
 
 	mfa "github.com/silinternational/serverless-mfa-api-go"
@@ -39,6 +41,8 @@ func main() {
 	envConfig.InitAWS()
 	mfa.SetConfig(envConfig)
 
+	sentryInit()
+
 	lambda.Start(handler)
 }
 
@@ -54,6 +58,12 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 	headers := map[string]string{}
 	for k, v := range w.Header() {
 		headers[k] = v[0]
+	}
+
+	if w.Status == http.StatusInternalServerError {
+		logger := sentry.NewLogger(ctx)
+		logger.Error().Emit(string(w.Body))
+		defer sentry.Flush(2 * time.Second)
 	}
 
 	return events.APIGatewayProxyResponse{
@@ -81,4 +91,13 @@ func httpRequestFromProxyRequest(ctx context.Context, req events.APIGatewayProxy
 	}
 
 	return r.WithContext(ctx)
+}
+
+func sentryInit() {
+	if err := sentry.Init(sentry.ClientOptions{
+		Dsn:        envConfig.SentryDSN,
+		EnableLogs: true,
+	}); err != nil {
+		log.Printf("Sentry initialization failed: %v\n", err)
+	}
 }
