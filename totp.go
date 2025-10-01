@@ -175,7 +175,7 @@ func newTOTP(db *Storage, apiKey ApiKey, issuer, name string) (TOTP, error) {
 	return t, nil
 }
 
-// DeleteTOTP is the http handler to delete a password.
+// DeleteTOTP is the http handler to delete a TOTP.
 func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue(UUIDParam)
 
@@ -213,7 +213,7 @@ func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, nil, http.StatusNoContent)
 }
 
-// ValidateTOTP is the http handler to validate a password.
+// ValidateTOTP is the http handler to validate a TOTP.
 func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 	requestBody, err := parseValidateTOTPRequestBody(r.Body)
 	if err != nil {
