@@ -40,7 +40,6 @@ type finishRegistrationResponse struct {
 
 // finishLoginResponse contains the response data for the FinishLogin endpoint
 type finishLoginResponse struct {
-	CredentialID  string `json:"credentialId"` // DEPRECATED, use KeyHandleHash instead
 	KeyHandleHash string `json:"key_handle_hash"`
 }
 
@@ -140,7 +139,6 @@ func (a *App) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := finishLoginResponse{
-		CredentialID:  string(credential.ID),
 		KeyHandleHash: hashAndEncodeKeyHandle(credential.ID),
 	}
 
