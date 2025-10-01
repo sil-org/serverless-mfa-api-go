@@ -75,9 +75,9 @@ data "template_file" "lambdaRolePolicy" {
     app_name    = var.app_name
     app_env     = var.app_env
     table_arns = join(",", [
-      aws_dynamodb_table.api_key.arn,
-      aws_dynamodb_table.totp.arn,
-      aws_dynamodb_table.webauthn.arn,
+      "\"${aws_dynamodb_table.api_key.arn}\"",
+      "\"${aws_dynamodb_table.totp.arn}\"",
+      "\"${aws_dynamodb_table.webauthn.arn}\"",
     ])
   }
 }
