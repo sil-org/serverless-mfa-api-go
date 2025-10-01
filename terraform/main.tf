@@ -95,6 +95,7 @@ resource "aws_dynamodb_table" "api_key" {
   hash_key                    = "value"
   deletion_protection_enabled = true
   stream_enabled              = true
+  stream_view_type            = "NEW_IMAGE"
 
   attribute {
     name = "value"
