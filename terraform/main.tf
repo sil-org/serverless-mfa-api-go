@@ -8,7 +8,7 @@ data "aws_caller_identity" "this" {}
 
 # CDK IAM user
 resource "aws_iam_user" "cdk" {
-  name = "${var.app_name}-cdk"
+  name = "${var.app_name}-${var.app_env}-cdk"
 }
 
 resource "aws_iam_access_key" "cdk" {
@@ -16,7 +16,7 @@ resource "aws_iam_access_key" "cdk" {
 }
 
 resource "aws_iam_policy" "cdk" {
-  name        = "${var.app_name}-cdk"
+  name        = "${var.app_name}-${var.app_env}-cdk"
   description = "CDK deployment policy"
 
   policy = jsonencode({
