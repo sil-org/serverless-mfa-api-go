@@ -346,7 +346,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 	key := user.ApiKey
 	must(db.Store(config.ApiKeyTable, key))
 
-	totp := ms.newPasscode(key)
+	totp := ms.newTOTP(key)
 
 	newKey := newTestKey()
 	must(db.Store(config.ApiKeyTable, newKey))
@@ -508,7 +508,7 @@ func (ms *MfaSuite) TestApiKey_ReEncryptTOTPs() {
 	must(newKey.Activate())
 	must(ms.app.GetDB().Store(ms.app.GetConfig().ApiKeyTable, newKey))
 
-	_ = ms.newPasscode(oldKey)
+	_ = ms.newTOTP(oldKey)
 
 	complete, incomplete, err := newKey.ReEncryptTOTPs(storage, oldKey)
 	ms.NoError(err)

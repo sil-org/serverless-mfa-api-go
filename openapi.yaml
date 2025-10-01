@@ -651,7 +651,7 @@ paths:
 
   /totp:
     post:
-      summary: Create a new passcode (TOTP)
+      summary: Create a new TOTP
       requestBody:
         content:
           application/json:
@@ -679,11 +679,11 @@ paths:
                 properties:
                   uuid:
                     type: string
-                    description: The unique identifier for the passcode.
+                    description: The unique identifier for the TOTP.
                     example: "aaaaaaaa-1111-aaaa-1111-aaaaaaaaaaaa"
                   totpKey:
                     type: string
-                    description: The passcode secret key.
+                    description: The TOTP secret key.
                     example: "0123456789ABCDEF0123456789ABCDEF"
                   imageUrl:
                     type: string
@@ -695,14 +695,14 @@ paths:
                   otpAuthUrl:
                     type: string
                     description: >-
-                      OTPAuthURL is an otpauth URI that contains the passcode secret key. It may also contain metadata 
+                      OTPAuthURL is an otpauth URI that contains the TOTP secret key. It may also contain metadata 
                       like issuer, algorithm, and number of digits.
                     example: "otpauth://totp/idp:john_smith?secret=0123456789ABCDEF0123456789ABCDEF&issuer=SIL%20IdP"
         401:
           $ref: "#/components/responses/UnauthorizedError"
   /totp/{uuid}:
     delete:
-      summary: Delete a passcode (TOTP)
+      summary: Delete a TOTP
       parameters:
         - in: path
           name: uuid
@@ -710,7 +710,7 @@ paths:
             type: string
             format: uuid
           required: true
-          description: The unique identifier for the passcode.
+          description: The unique identifier for the TOTP.
       responses:
         "204":
           description: Success
@@ -720,7 +720,7 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
   /totp/{uuid}/validate:
     delete:
-      summary: Validate a passcode (TOTP)
+      summary: Validate a TOTP
       parameters:
         - in: path
           name: uuid
@@ -728,7 +728,7 @@ paths:
             type: string
             format: uuid
           required: true
-          description: The unique identifier for the passcode.
+          description: The unique identifier for the TOTP.
       requestBody:
         content:
           application/json:

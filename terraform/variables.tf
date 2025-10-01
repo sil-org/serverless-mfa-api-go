@@ -1,7 +1,7 @@
 variable "app_name" {
   type        = string
   description = "A short name for this application, example: backup-service"
-  default     = "serverless-mfa-api-go"
+  default     = "twosv-api"
 }
 
 variable "app_env" {
@@ -12,11 +12,6 @@ variable "app_env" {
 variable "aws_access_key_id" {
   type        = string
   description = "Access Key ID for user with permissions to create resources for CDK"
-}
-
-variable "aws_account_id" {
-  type        = string
-  description = "AWS Account ID for use in IAM policy resource references"
 }
 
 variable "aws_region" {
@@ -32,40 +27,6 @@ variable "aws_region_secondary" {
 variable "aws_secret_access_key" {
   type        = string
   description = "Secret access Key ID for user with permissions to create resources for CDK"
-}
-
-variable "api_key_table" {
-  type        = string
-  description = "Override api key table name"
-  default     = ""
-}
-
-variable "create_api_key_table" {
-  type    = bool
-  default = true
-}
-
-variable "totp_table" {
-  description = "Override totp table name"
-  type        = string
-  default     = null
-}
-
-variable "create_totp_table" {
-  description = "enable the creation of a DynamoDB table for TOTP credentials"
-  type        = bool
-  default     = false
-}
-
-variable "webauthn_table" {
-  type        = string
-  description = "Override webauthn table name"
-  default     = ""
-}
-
-variable "create_webauthn_table" {
-  type    = bool
-  default = true
 }
 
 variable "cloudflare_token" {

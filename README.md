@@ -1,6 +1,6 @@
 # A Serverless MFA API with support for TOTP and WebAuthn
 
-This project provides a semi-generic backend API for supporting Time-based One Time Passcode (TOTP) and WebAuthn 
+This project provides a semi-generic backend API for supporting Time-based One Time Password (TOTP) and WebAuthn 
 Passkey registration and authentication. It is intended to be run in a manner as to be shared between multiple consuming
 applications. It uses an API key and secret to authenticate requests, and further uses that secret as the encryption 
 key. Loss of the API secret would mean loss of all credentials stored.
@@ -38,15 +38,15 @@ This endpoint has not yet been proven in production use. Proceed at your own ris
 1. `x-mfa-apikey` - The API Key
 2. `x-mfa-apisecret` - The API Key Secret
 
-### Create TOTP Passcode
+### Create TOTP
 
 `POST /totp`
 
-### Delete TOTP Passcode
+### Delete TOTP
 
 `DELETE /totp/{uuid}`
 
-### Validate TOTP Passcode
+### Validate TOTP
 
 `POST /totp/{uuid}/validate`
 

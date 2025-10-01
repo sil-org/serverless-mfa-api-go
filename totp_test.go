@@ -119,7 +119,7 @@ func (ms *MfaSuite) TestNewTOTP() {
 func (ms *MfaSuite) TestAppDeleteTOTP() {
 	key := newTestKey()
 	otherKey := newTestKey()
-	testTOTP := ms.newPasscode(key)
+	testTOTP := ms.newTOTP(key)
 
 	ctxWithAPIKey := context.WithValue(context.Background(), UserContextKey, key)
 	ctxWithOtherAPIKey := context.WithValue(context.Background(), UserContextKey, otherKey)
@@ -273,7 +273,7 @@ func (ms *MfaSuite) newRequest(ctx context.Context, method, path, body string) *
 	return r.WithContext(ctx)
 }
 
-func (ms *MfaSuite) newPasscode(key ApiKey) TOTP {
+func (ms *MfaSuite) newTOTP(key ApiKey) TOTP {
 	t := TOTP{
 		UUID:             NewUUID(),
 		ApiKey:           key.Key,
