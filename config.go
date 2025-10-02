@@ -22,6 +22,8 @@ type EnvConfig struct {
 	AwsDefaultRegion string `default:"" split_words:"true"`
 
 	AWSConfig aws.Config `json:"-"`
+
+	SentryDSN string `split_words:"true"`
 }
 
 func (e *EnvConfig) InitAWS() {
