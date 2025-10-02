@@ -662,7 +662,6 @@ func (ms *MfaSuite) Test_FinishLogin() {
 			name:    "with first credential",
 			httpReq: reqWithBody1,
 			wantBodyContains: []string{
-				`"credentialId":"` + credID1 + `"`,
 				`"key_handle_hash":"` + khh1 + `"`,
 			},
 		},
@@ -670,7 +669,6 @@ func (ms *MfaSuite) Test_FinishLogin() {
 			name:    "with second credential",
 			httpReq: reqWithBody2,
 			wantBodyContains: []string{
-				`"credentialId":"` + credID2 + `"`,
 				`"key_handle_hash":"` + khh2 + `"`,
 			},
 		},

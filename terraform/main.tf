@@ -141,13 +141,19 @@ resource "aws_dynamodb_table" "totp" {
   }
 }
 
+variable "webauthn_stream_view_type" {
+  description = "TEMPORARY: added to resolve an anomaly in the mfa-api_dev_u2f_global table"
+  type        = string
+  default     = "NEW_IMAGE"
+}
+
 resource "aws_dynamodb_table" "webauthn" {
   name                        = "mfa-api_${var.app_env}_u2f_global"
   hash_key                    = "uuid"
   billing_mode                = "PAY_PER_REQUEST"
   deletion_protection_enabled = true
   stream_enabled              = true
-  stream_view_type            = "NEW_IMAGE"
+  stream_view_type            = var.webauthn_stream_view_type
 
   attribute {
     name = "uuid"
