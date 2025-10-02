@@ -60,7 +60,7 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 		headers[k] = v[0]
 	}
 
-	if w.Status == http.StatusInternalServerError {
+	if w.Status == http.StatusInternalServerError && envConfig.SentryDSN != "" {
 		logger := sentry.NewLogger(ctx)
 		logger.Error().Emit(string(w.Body))
 		defer sentry.Flush(2 * time.Second)
@@ -94,6 +94,10 @@ func httpRequestFromProxyRequest(ctx context.Context, req events.APIGatewayProxy
 }
 
 func sentryInit() {
+	if envConfig.SentryDSN == "" {
+		return
+	}
+
 	if err := sentry.Init(sentry.ClientOptions{
 		Dsn:        envConfig.SentryDSN,
 		EnableLogs: true,
