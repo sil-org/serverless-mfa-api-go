@@ -61,9 +61,11 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 	}
 
 	if w.Status == http.StatusInternalServerError && envConfig.SentryDSN != "" {
-		logger := sentry.NewLogger(ctx)
-		logger.Error().Emit(string(w.Body))
-		defer sentry.Flush(2 * time.Second)
+		sentry.WithScope(func(scope *sentry.Scope) {
+			scope.SetLevel(sentry.LevelError)
+			sentry.CaptureMessage(string(w.Body))
+		})
+		sentry.Flush(2 * time.Second)
 	}
 
 	return events.APIGatewayProxyResponse{
@@ -99,8 +101,9 @@ func sentryInit() {
 	}
 
 	if err := sentry.Init(sentry.ClientOptions{
-		Dsn:        envConfig.SentryDSN,
-		EnableLogs: true,
+		Dsn:         envConfig.SentryDSN,
+		EnableLogs:  true,
+		Environment: envConfig.Environment,
 	}); err != nil {
 		log.Printf("Sentry initialization failed: %v\n", err)
 	}
