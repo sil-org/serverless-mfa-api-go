@@ -23,7 +23,8 @@ type EnvConfig struct {
 
 	AWSConfig aws.Config `json:"-"`
 
-	SentryDSN string `split_words:"true"`
+	Environment string
+	SentryDSN   string `split_words:"true"`
 }
 
 func (e *EnvConfig) InitAWS() {

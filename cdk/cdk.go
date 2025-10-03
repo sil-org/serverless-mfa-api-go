@@ -48,6 +48,7 @@ func NewCdkStack(scope constructs.Construct, id string, props *CdkStackProps) aw
 			"TOTP_TABLE":     jsii.String(totpTable),
 			"WEBAUTHN_TABLE": jsii.String(webauthnTable),
 			"AWS_ENDPOINT":   jsii.String(""),
+			"ENVIRONMENT":    jsii.String(env),
 			"SENTRY_DSN":     jsii.String(os.Getenv("SENTRY_DSN")),
 		},
 		FunctionName:  &functionName,
