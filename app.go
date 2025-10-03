@@ -2,11 +2,17 @@ package mfa
 
 import (
 	"log"
+	"net/http"
 )
 
 type App struct {
 	config EnvConfig
 	db     *Storage
+}
+
+func (a *App) FakeError(w http.ResponseWriter, r *http.Request) {
+	jsonResponse(w, "this is a test message generated to confirm Sentry is working", http.StatusInternalServerError)
+	log.Printf("this is a test log entry generated to confirm Sentry is working")
 }
 
 // NewApp creates a new App containing configuration and service clients

@@ -31,5 +31,6 @@ func getRoutes(app *mfa.App) map[string]http.HandlerFunc {
 		"PUT /webauthn/login":                               app.FinishLogin,
 		"DELETE /webauthn/user":                             app.DeleteUser,
 		"DELETE /webauthn/credential/{" + mfa.IDParam + "}": app.DeleteCredential,
+		"POST /api-key/error":                               app.FakeError,
 	}
 }
