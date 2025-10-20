@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	u2fsim "github.com/silinternational/serverless-mfa-api-go/u2fsimulator"
+	u2fsim "github.com/sil-org/serverless-mfa-api-go/u2fsimulator"
 )
 
 func main() {
