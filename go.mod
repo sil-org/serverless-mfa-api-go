@@ -1,4 +1,4 @@
-module github.com/silinternational/serverless-mfa-api-go
+module github.com/sil-org/serverless-mfa-api-go
 
 go 1.24
 

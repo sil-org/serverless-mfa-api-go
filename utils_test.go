@@ -18,7 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	u2fsim "github.com/silinternational/serverless-mfa-api-go/u2fsimulator"
+	u2fsim "github.com/sil-org/serverless-mfa-api-go/u2fsimulator"
 )
 
 const localAppID = "http://localhost"

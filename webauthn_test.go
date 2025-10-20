@@ -19,7 +19,7 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/stretchr/testify/require"
 
-	u2fsim "github.com/silinternational/serverless-mfa-api-go/u2fsimulator"
+	u2fsim "github.com/sil-org/serverless-mfa-api-go/u2fsimulator"
 )
 
 // These come from https://github.com/duo-labs/webauthn/blob/23776d77aa561cf1d5cf9f10a65daab336a1d399/protocol/assertion_test.go

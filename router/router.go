@@ -3,7 +3,7 @@ package router
 import (
 	"net/http"
 
-	mfa "github.com/silinternational/serverless-mfa-api-go"
+	mfa "github.com/sil-org/serverless-mfa-api-go"
 )
 
 // NewMux forms a new ServeMux router, see https://pkg.go.dev/net/http#ServeMux.
