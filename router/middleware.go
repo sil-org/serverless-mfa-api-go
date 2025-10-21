@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	mfa "github.com/silinternational/serverless-mfa-api-go"
+	mfa "github.com/sil-org/serverless-mfa-api-go"
 )
 
 // authenticationMiddleware gets API key information from request headers and validates the key/signature

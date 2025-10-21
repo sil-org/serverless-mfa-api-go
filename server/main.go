@@ -7,8 +7,8 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 
-	mfa "github.com/silinternational/serverless-mfa-api-go"
-	"github.com/silinternational/serverless-mfa-api-go/router"
+	mfa "github.com/sil-org/serverless-mfa-api-go"
+	"github.com/sil-org/serverless-mfa-api-go/router"
 )
 
 var envConfig mfa.EnvConfig
