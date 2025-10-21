@@ -74,11 +74,11 @@ data "template_file" "lambdaRolePolicy" {
     aws_account = local.aws_account
     app_name    = var.app_name
     app_env     = var.app_env
-    table_arns = join(",", compact([
+    table_arns = join(",", [
       "\"arn:aws:dynamodb:*:${local.aws_account}:table/${aws_dynamodb_table.api_key.name}\"",
       "\"arn:aws:dynamodb:*:${local.aws_account}:table/${aws_dynamodb_table.webauthn.name}\"",
       "\"arn:aws:dynamodb:*:${local.aws_account}:table/${aws_dynamodb_table.totp.name}\"",
-    ]))
+    ])
   }
 }
 
