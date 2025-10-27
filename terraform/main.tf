@@ -36,7 +36,7 @@ resource "aws_iam_user_policy_attachment" "cdk" {
 
 // Set up custom domain name for easier fail-over.
 module "dns_for_failover" {
-  source  = "silinternational/serverless-api-dns-for-failover/aws"
+  source  = "sil-org/serverless-api-dns-for-failover/aws"
   version = "~> 0.6.0"
 
   api_name             = local.api_name
