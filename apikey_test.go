@@ -210,31 +210,31 @@ func (ms *MfaSuite) TestActivateApiKey() {
 	localStorage, err := NewStorage(awsConfig)
 	must(err)
 
-	key1 := ApiKey{Key: "key1"}
+	key1 := ApiKey{Key: "key1", Email: "1" + exampleEmail}
 	must(localStorage.Store(envConfig.ApiKeyTable, &key1))
-	key2 := ApiKey{Key: "key2", ActivatedAt: 1744799134000}
+	key2 := ApiKey{Key: "key2", Email: "2" + exampleEmail, ActivatedAt: 1744799134000}
 	must(localStorage.Store(envConfig.ApiKeyTable, &key2))
-	key3 := ApiKey{Key: "key3"}
+	key3 := ApiKey{Key: "key3", Email: "3" + exampleEmail}
 	must(localStorage.Store(envConfig.ApiKeyTable, &key3))
 
 	tests := []struct {
 		name       string
-		body       any
+		body       map[string]string
 		wantStatus int
 		wantError  error
 	}{
 		{
 			name: "not previously activated",
-			body: map[string]any{
-				"email":       exampleEmail,
+			body: map[string]string{
+				"email":       key1.Email,
 				"apiKeyValue": key1.Key,
 			},
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "already activated",
-			body: map[string]any{
-				"email":       exampleEmail,
+			body: map[string]string{
+				"email":       key2.Email,
 				"apiKeyValue": key2.Key,
 			},
 			wantStatus: http.StatusBadRequest,
@@ -242,15 +242,15 @@ func (ms *MfaSuite) TestActivateApiKey() {
 		},
 		{
 			name: "missing email",
-			body: map[string]any{
+			body: map[string]string{
 				"apiKeyValue": key3.Key,
 			},
 			wantStatus: http.StatusBadRequest,
 			wantError:  errors.New("email is required"),
 		},
 		{
-			name: "missing apiKey",
-			body: map[string]any{
+			name: "missing apiKeyValue",
+			body: map[string]string{
 				"email": exampleEmail,
 			},
 			wantStatus: http.StatusBadRequest,
@@ -258,7 +258,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 		},
 		{
 			name: "key not found",
-			body: map[string]any{
+			body: map[string]string{
 				"email":       exampleEmail,
 				"apiKeyValue": "not a key",
 			},
@@ -283,10 +283,17 @@ func (ms *MfaSuite) TestActivateApiKey() {
 			ms.Equal(http.StatusOK, res.Status, fmt.Sprintf("ActivateApiKey response: %s", res.Body))
 
 			var response struct {
-				ApiSecret string `json:"apiSecret"`
+				Email       string    `json:"email"`
+				ApiKeyValue string    `json:"apiKeyValue"`
+				ApiSecret   string    `json:"apiSecret"`
+				ActivatedAt time.Time `json:"activatedAt"`
+				CreatedAt   time.Time `json:"createdAt"`
 			}
 			ms.NoError(json.Unmarshal(res.Body, &response))
-			ms.Len(response.ApiSecret, 44)
+			ms.Regexp("^[A-Za-z0-9+/]{43}=$", response.ApiSecret, "apiSecret isn't correct")
+			ms.Equal(tt.body["email"], response.Email, "email isn't correct")
+			ms.Equal(tt.body["apiKeyValue"], response.ApiKeyValue, "apiKeyValue isn't correct")
+			ms.WithinDuration(time.Now().UTC(), response.ActivatedAt, time.Minute, "activatedAt isn't correct")
 		})
 	}
 }

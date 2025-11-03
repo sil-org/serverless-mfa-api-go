@@ -402,7 +402,14 @@ func (a *App) ActivateApiKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonResponse(w, map[string]string{"apiSecret": newKey.Secret}, http.StatusOK)
+	response := map[string]string{
+		"email":       newKey.Email,
+		"apiKeyValue": newKey.Key,
+		"apiSecret":   newKey.Secret,
+		"activatedAt": time.Unix(int64(newKey.ActivatedAt)/1000, 0).UTC().Format(time.RFC3339),
+		"createdAt":   time.Unix(int64(newKey.CreatedAt)/1000, 0).UTC().Format(time.RFC3339),
+	}
+	jsonResponse(w, response, http.StatusOK)
 }
 
 // CreateApiKey is the handler for the POST /api-key endpoint. It creates a new API Key and saves it to the database.
