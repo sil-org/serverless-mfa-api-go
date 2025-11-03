@@ -210,11 +210,11 @@ func (ms *MfaSuite) TestActivateApiKey() {
 	localStorage, err := NewStorage(awsConfig)
 	must(err)
 
-	key1 := ApiKey{Key: "key1", Email: "1" + exampleEmail}
+	key1 := ApiKey{Key: "key1", Email: "1" + exampleEmail, CreatedAt: 1744799133000}
 	must(localStorage.Store(envConfig.ApiKeyTable, &key1))
-	key2 := ApiKey{Key: "key2", Email: "2" + exampleEmail, ActivatedAt: 1744799134000}
+	key2 := ApiKey{Key: "key2", Email: "2" + exampleEmail, CreatedAt: 1744799133000, ActivatedAt: 1744799134000}
 	must(localStorage.Store(envConfig.ApiKeyTable, &key2))
-	key3 := ApiKey{Key: "key3", Email: "3" + exampleEmail}
+	key3 := ApiKey{Key: "key3", Email: "3" + exampleEmail, CreatedAt: 1744799133000}
 	must(localStorage.Store(envConfig.ApiKeyTable, &key3))
 
 	tests := []struct {
@@ -293,6 +293,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 			ms.Regexp("^[A-Za-z0-9+/]{43}=$", response.ApiSecret, "apiSecret isn't correct")
 			ms.Equal(tt.body["email"], response.Email, "email isn't correct")
 			ms.Equal(tt.body["apiKeyValue"], response.ApiKeyValue, "apiKeyValue isn't correct")
+			ms.Equal(time.Date(2025, 4, 16, 10, 25, 33, 0, time.UTC), response.CreatedAt, "createdAt isn't correct")
 			ms.WithinDuration(time.Now().UTC(), response.ActivatedAt, time.Minute, "activatedAt isn't correct")
 		})
 	}
