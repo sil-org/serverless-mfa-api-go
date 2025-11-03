@@ -364,8 +364,27 @@ paths:
                   required: true
                   example: email@example.com
       responses:
-        204:
+        200:
           description: New API key created
+          content:
+            application/json:
+              schema:
+                properties:
+                  email:
+                    type: string
+                    description: email
+                    required: true
+                    example: "admin@example.com"
+                  id:
+                    type: string
+                    description: id
+                    required: true
+                    example: "0123456789abcdef0123456789abcdef01234567"
+                  created_at:
+                    type: string
+                    description: created_at
+                    required: true
+                    example: "2006-01-02T15:04:05Z"
         400:
           description: Bad Request
           content:

@@ -308,7 +308,7 @@ func (ms *MfaSuite) TestCreateApiKey() {
 			body: map[string]interface{}{
 				"email": exampleEmail,
 			},
-			wantStatus: http.StatusNoContent,
+			wantStatus: http.StatusOK,
 		},
 		{
 			name:       "missing email",
@@ -332,6 +332,16 @@ func (ms *MfaSuite) TestCreateApiKey() {
 			}
 
 			ms.Equal(tt.wantStatus, res.Status, fmt.Sprintf("CreateApiKey response: %s", res.Body))
+
+			var response struct {
+				Email     string    `json:"email"`
+				ID        string    `json:"id"`
+				CreatedAt time.Time `json:"created_at"`
+			}
+			ms.NoError(json.Unmarshal(res.Body, &response))
+			ms.Equal(exampleEmail, response.Email)
+			ms.Regexp("^[0-9a-z]{40}$", response.ID)
+			ms.WithinDuration(time.Now().UTC(), response.CreatedAt, time.Minute)
 		})
 	}
 }
