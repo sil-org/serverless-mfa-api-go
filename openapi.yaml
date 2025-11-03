@@ -375,12 +375,12 @@ paths:
                     description: Email address of the requester
                     required: true
                     example: "admin@example.com"
-                  id:
+                  apiKeyValue:
                     type: string
                     description: Unique ID for the new API Key
                     required: true
                     example: "0123456789abcdef0123456789abcdef01234567"
-                  created_at:
+                  createdAt:
                     type: string
                     description: Time the key was created
                     required: true

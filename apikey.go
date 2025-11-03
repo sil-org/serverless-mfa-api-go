@@ -439,9 +439,9 @@ func (a *App) CreateApiKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]string{
-		"email":      key.Email,
-		"id":         key.Key,
-		"created_at": time.Unix(int64(key.CreatedAt)/1000, 0).UTC().Format(time.RFC3339),
+		"email":       key.Email,
+		"apiKeyValue": key.Key,
+		"createdAt":   time.Unix(int64(key.CreatedAt)/1000, 0).UTC().Format(time.RFC3339),
 	}
 	jsonResponse(w, response, http.StatusOK)
 }

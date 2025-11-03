@@ -334,13 +334,13 @@ func (ms *MfaSuite) TestCreateApiKey() {
 			ms.Equal(tt.wantStatus, res.Status, fmt.Sprintf("CreateApiKey response: %s", res.Body))
 
 			var response struct {
-				Email     string    `json:"email"`
-				ID        string    `json:"id"`
-				CreatedAt time.Time `json:"created_at"`
+				Email       string    `json:"email"`
+				APIKeyValue string    `json:"apiKeyValue"`
+				CreatedAt   time.Time `json:"createdAt"`
 			}
 			ms.NoError(json.Unmarshal(res.Body, &response))
 			ms.Equal(exampleEmail, response.Email)
-			ms.Regexp("^[0-9a-z]{40}$", response.ID)
+			ms.Regexp("^[0-9a-z]{40}$", response.APIKeyValue)
 			ms.WithinDuration(time.Now().UTC(), response.CreatedAt, time.Minute)
 		})
 	}
