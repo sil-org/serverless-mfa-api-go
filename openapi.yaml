@@ -398,6 +398,8 @@ paths:
                 email-required:
                   value:
                     error: "email is required"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
   /api-key/activate:
     post:
       operationId: activateApiKey
@@ -449,6 +451,8 @@ paths:
                 email-required:
                   value:
                     error: "email is required"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
         404:
           description: Not Found
           content:
@@ -533,6 +537,8 @@ paths:
                 api-key-required:
                   value:
                     error: "apiKeyValue is required"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
         404:
           description: Not Found
           content:
