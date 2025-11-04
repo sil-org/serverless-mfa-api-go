@@ -364,8 +364,27 @@ paths:
                   required: true
                   example: email@example.com
       responses:
-        204:
+        200:
           description: New API key created
+          content:
+            application/json:
+              schema:
+                properties:
+                  email:
+                    type: string
+                    description: Email address of the requester
+                    required: true
+                    example: "admin@example.com"
+                  apiKeyValue:
+                    type: string
+                    description: Unique ID for the new API Key
+                    required: true
+                    example: "0123456789abcdef0123456789abcdef01234567"
+                  createdAt:
+                    type: string
+                    description: Time the key was created
+                    required: true
+                    example: "2006-01-02T15:04:05Z"
         400:
           description: Bad Request
           content:
@@ -379,6 +398,8 @@ paths:
                 email-required:
                   value:
                     error: "email is required"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
   /api-key/activate:
     post:
       operationId: activateApiKey
@@ -430,6 +451,8 @@ paths:
                 email-required:
                   value:
                     error: "email is required"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
         404:
           description: Not Found
           content:
@@ -514,6 +537,8 @@ paths:
                 api-key-required:
                   value:
                     error: "apiKeyValue is required"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
         404:
           description: Not Found
           content:

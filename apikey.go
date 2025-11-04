@@ -438,7 +438,12 @@ func (a *App) CreateApiKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonResponse(w, nil, http.StatusNoContent)
+	response := map[string]string{
+		"email":       key.Email,
+		"apiKeyValue": key.Key,
+		"createdAt":   time.Unix(int64(key.CreatedAt)/1000, 0).UTC().Format(time.RFC3339),
+	}
+	jsonResponse(w, response, http.StatusOK)
 }
 
 // RotateApiKey facilitates the rotation of API Keys. All data in webauthn and totp tables that is encrypted by the old
