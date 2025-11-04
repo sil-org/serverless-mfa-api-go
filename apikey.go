@@ -25,8 +25,6 @@ const ApiKeyTablePK = "value"
 const (
 	paramNewKeyId     = "newKeyId"
 	paramNewKeySecret = "newKeySecret"
-	paramOldKeyId     = "oldKeyId"
-	paramOldKeySecret = "oldKeySecret"
 )
 
 const (
@@ -451,22 +449,28 @@ func (a *App) CreateApiKey(w http.ResponseWriter, r *http.Request) {
 // any number of times to continue the process. A status of 200 does not indicate that all keys were encrypted using the
 // new key. Check the response data to determine if the rotation process is complete.
 func (a *App) RotateApiKey(w http.ResponseWriter, r *http.Request) {
-	requestBody, err := parseRotateKeyRequestBody(r.Body)
+	var requestBody map[string]string
+	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		if strings.HasSuffix(err.Error(), "is required") {
-			jsonResponse(w, err, http.StatusBadRequest)
-		} else {
-			log.Printf("invalid request in RotateApiKey: %s", err)
-			jsonResponse(w, invalidRequest, http.StatusBadRequest)
-		}
+		log.Printf("invalid request in ActivateApiKey: %s", err)
+		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
 
-	oldKey := ApiKey{Key: requestBody[paramOldKeyId], Store: a.GetDB()}
-	err = oldKey.loadAndCheck(requestBody[paramOldKeySecret])
+	if requestBody[paramNewKeyId] == "" {
+		jsonResponse(w, paramNewKeyId+" is required", http.StatusBadRequest)
+		return
+	}
+
+	if requestBody[paramNewKeySecret] == "" {
+		jsonResponse(w, paramNewKeySecret+" is required", http.StatusBadRequest)
+		return
+	}
+
+	oldKey, err := getAPIKey(r)
 	if err != nil {
-		log.Printf("old key is not valid: %s", err)
-		jsonResponse(w, apiKeyNotFound, http.StatusNotFound)
+		log.Printf("Rotate API key error: %v", err)
+		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
@@ -500,22 +504,6 @@ func (a *App) RotateApiKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, responseBody, http.StatusOK)
-}
-
-func parseRotateKeyRequestBody(body io.Reader) (map[string]string, error) {
-	var requestBody map[string]string
-	err := json.NewDecoder(body).Decode(&requestBody)
-	if err != nil {
-		return nil, fmt.Errorf("invalid request in RotateApiKey: %w", err)
-	}
-
-	fields := []string{paramNewKeyId, paramNewKeySecret, paramOldKeyId, paramOldKeySecret}
-	for _, field := range fields {
-		if _, ok := requestBody[field]; !ok {
-			return nil, fmt.Errorf("%s is required", field)
-		}
-	}
-	return requestBody, nil
 }
 
 func (k *ApiKey) loadAndCheck(secret string) error {

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -744,6 +745,7 @@ func Test_GetPublicKeyAsBytes(t *testing.T) {
 
 func Router(app *App) http.Handler {
 	mux := &http.ServeMux{}
+	mux.HandleFunc("POST /api-key/rotate", app.RotateApiKey)
 	mux.HandleFunc(fmt.Sprintf("DELETE /webauthn/credential/{%s}", IDParam), app.DeleteCredential)
 	// Ensure a request without an id gets handled properly
 	mux.HandleFunc("DELETE /webauthn/credential/", app.DeleteCredential)
@@ -752,11 +754,13 @@ func Router(app *App) http.Handler {
 	return testAuthnMiddleware(mux)
 }
 
+// testAuthnMiddleware is a copy of the authenticationMiddleware function
 func testAuthnMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, err := AuthenticateRequest(r)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("unable to authenticate request: %s", err), http.StatusUnauthorized)
+			log.Printf("unable to authenticate request: %s", err)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
@@ -841,8 +845,8 @@ func (ms *MfaSuite) Test_DeleteCredential() {
 		ms.T().Run(tt.name, func(t *testing.T) {
 			request, _ := http.NewRequest("DELETE", fmt.Sprintf("/webauthn/credential/%s", tt.credID), nil)
 
-			request.Header.Set("x-mfa-apikey", tt.user.ApiKeyValue)
-			request.Header.Set("x-mfa-apisecret", tt.user.ApiKey.Secret)
+			request.Header.Set(HeaderAPIKey, tt.user.ApiKeyValue)
+			request.Header.Set(HeaderAPISecret, tt.user.ApiKey.Secret)
 			request.Header.Set("x-mfa-RPDisplayName", "TestRPName")
 			request.Header.Set("x-mfa-RPID", "111.11.11.11")
 			request.Header.Set("x-mfa-UserUUID", tt.user.ID)

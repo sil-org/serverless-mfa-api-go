@@ -468,7 +468,8 @@ paths:
       operationId: rotateApiKey
       summary: Rotate API Key
       description: >
-        All data in webauthn and totp tables that is encrypted by the old key will be re-encrypted using the new key.
+        All data in webauthn and totp tables that is encrypted by the old key (identified by the request headers 
+        `x-mfa-apikey` and `x-mfa-apisecret`) will be re-encrypted using a new key identified in the request body.
         If the process does not run to completion, this endpoint can be called any number of times to continue the
         process. A status of 200 does not indicate that all keys were encrypted using the new key. Check the response
         data to determine if the rotation process is complete.
@@ -480,16 +481,6 @@ paths:
             schema:
               type: object
               properties:
-                oldKeyId:
-                  type: string
-                  description: old API Key ID
-                  required: true
-                  example: 0123456789012345678901234567890123456789
-                oldKeySecret:
-                  type: string
-                  description: old API Key secret
-                  required: true
-                  example: 0123456789012345678901234567890123456789012=
                 newKeyId:
                   type: string
                   description: new API Key ID
