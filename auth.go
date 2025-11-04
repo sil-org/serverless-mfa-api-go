@@ -53,7 +53,7 @@ func AuthenticateRequest(r *http.Request) (User, error) {
 		return authTOTP(apiKey)
 
 	case "api-key":
-		return nil, nil // no authentication required for api-key
+		return apiKey, nil
 
 	default:
 		return nil, fmt.Errorf("invalid URL: %s", r.URL)
