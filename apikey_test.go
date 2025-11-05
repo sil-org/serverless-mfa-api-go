@@ -366,7 +366,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 	key := user.ApiKey
 	must(db.Store(config.ApiKeyTable, key))
 
-	const numberOfTOTPs = 100
+	const numberOfTOTPs = 1000
 	totpList := make([]TOTP, numberOfTOTPs)
 	for i := range totpList {
 		totpList[i] = ms.newTOTP(key)
