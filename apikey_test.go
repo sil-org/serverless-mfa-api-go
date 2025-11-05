@@ -2,6 +2,7 @@ package mfa
 
 import (
 	"bytes"
+	"context"
 	"crypto/aes"
 	"crypto/rand"
 	"encoding/base64"
@@ -10,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"testing"
 	"time"
@@ -372,78 +374,70 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 	tests := []struct {
 		name       string
 		body       any
+		key        ApiKey
 		wantStatus int
-		wantError  error
+		wantError  string
 	}{
 		{
-			name: "missing oldKeyId",
+			name: "missing key",
 			body: map[string]interface{}{
 				paramNewKeyId:     newKey.Key,
 				paramNewKeySecret: newKey.Secret,
-				paramOldKeySecret: key.Secret,
 			},
-			wantStatus: http.StatusBadRequest,
-			wantError:  errors.New("oldKeyId is required"),
-		},
-		{
-			name: "missing oldKeySecret",
-			body: map[string]interface{}{
-				paramNewKeyId:     newKey.Key,
-				paramNewKeySecret: newKey.Secret,
-				paramOldKeyId:     key.Key,
-			},
-			wantStatus: http.StatusBadRequest,
-			wantError:  errors.New("oldKeySecret is required"),
+			wantStatus: http.StatusUnauthorized,
+			wantError:  "Unauthorized",
 		},
 		{
 			name: "missing newKeyId",
 			body: map[string]interface{}{
 				paramNewKeySecret: newKey.Secret,
-				paramOldKeyId:     key.Key,
-				paramOldKeySecret: key.Secret,
 			},
+			key:        key,
 			wantStatus: http.StatusBadRequest,
-			wantError:  errors.New("newKeyId is required"),
+			wantError:  "newKeyId is required",
 		},
 		{
 			name: "missing newKeySecret",
 			body: map[string]interface{}{
-				paramNewKeyId:     newKey.Key,
-				paramOldKeyId:     key.Key,
-				paramOldKeySecret: key.Secret,
+				paramNewKeyId: newKey.Key,
 			},
+			key:        key,
 			wantStatus: http.StatusBadRequest,
-			wantError:  errors.New("newKeySecret is required"),
+			wantError:  "newKeySecret is required",
 		},
 		{
 			name: "good",
 			body: map[string]interface{}{
 				paramNewKeyId:     newKey.Key,
 				paramNewKeySecret: newKey.Secret,
-				paramOldKeyId:     user.ApiKey.Key,
-				paramOldKeySecret: key.Secret,
 			},
+			key:        key,
 			wantStatus: http.StatusOK,
 		},
 	}
 	for _, tt := range tests {
 		ms.Run(tt.name, func() {
-			res := &lambdaResponseWriter{Headers: http.Header{}}
-			req := requestWithUser(tt.body, key)
-			ms.app.RotateApiKey(res, req)
+			jsonBody, err := json.Marshal(tt.body)
+			must(err)
+			b := io.NopCloser(bytes.NewReader(jsonBody))
+			request, _ := http.NewRequest(http.MethodPost, "/api-key/rotate", b)
+			request.Header.Set(HeaderAPIKey, tt.key.Key)
+			request.Header.Set(HeaderAPISecret, tt.key.Secret)
 
-			if tt.wantError != nil {
-				ms.Equal(tt.wantStatus, res.Status, fmt.Sprintf("CreateApiKey response: %s", res.Body))
-				var se simpleError
-				ms.decodeBody(res.Body, &se)
-				ms.ErrorIs(se, tt.wantError)
+			ctxWithUser := context.WithValue(request.Context(), UserContextKey, tt.key)
+			request = request.WithContext(ctxWithUser)
+
+			res := httptest.NewRecorder()
+			Router(ms.app).ServeHTTP(res, request)
+			ms.Equal(tt.wantStatus, res.Code, "incorrect http status, body: %s", res.Body.String())
+
+			if tt.wantError != "" {
+				ms.Contains(res.Body.String(), tt.wantError)
 				return
 			}
 
-			ms.Equal(tt.wantStatus, res.Status, fmt.Sprintf("CreateApiKey response: %s", res.Body))
-
 			var response map[string]int
-			ms.decodeBody(res.Body, &response)
+			ms.decodeBody(res.Body.Bytes(), &response)
 			ms.Equal(1, response["totpComplete"])
 			ms.Equal(1, response["webauthnComplete"])
 
