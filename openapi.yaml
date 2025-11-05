@@ -519,22 +519,28 @@ paths:
               schema:
                 type: object
                 properties:
-                  totpComplete:
-                    type: integer
-                    description: the number of TOTP codes that were encrypted with the new key
-                    required: true
-                  totpIncomplete:
-                    type: integer
-                    description: the number of TOTP codes that have not yet been encrypted with the new key
-                    required: true
-                  webauthnComplete:
-                    type: integer
-                    description: the number of Webauthn passkeys that were encrypted with the new key
-                    required: true
-                  webauthnIncomplete:
-                    type: integer
-                    description: the number of Webauthn passkeys that have not yet been encrypted with the new key
-                    required: true
+                  totp:
+                    type: object
+                    properties:
+                      complete:
+                        type: integer
+                        description: the number of TOTP codes that were encrypted with the new key
+                        required: true
+                      incomplete:
+                        type: integer
+                        description: the number of TOTP codes that have not yet been encrypted with the new key
+                        required: true
+                  webauthn:
+                    type: object
+                    properties:
+                      complete:
+                        type: integer
+                        description: the number of Webauthn passkeys that were encrypted with the new key
+                        required: true
+                      incomplete:
+                        type: integer
+                        description: the number of Webauthn passkeys that have not yet been encrypted with the new key
+                        required: true
         400:
           description: Bad Request
           content:
