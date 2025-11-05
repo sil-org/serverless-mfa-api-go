@@ -366,7 +366,11 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 	key := user.ApiKey
 	must(db.Store(config.ApiKeyTable, key))
 
-	totp := ms.newTOTP(key)
+	const numberOfTOTPs = 100
+	totpList := make([]TOTP, numberOfTOTPs)
+	for i := range totpList {
+		totpList[i] = ms.newTOTP(key)
+	}
 
 	newKey := newTestKey()
 	must(db.Store(config.ApiKeyTable, newKey))
@@ -425,7 +429,9 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 			request.Header.Set(HeaderAPISecret, tt.key.Secret)
 
 			ctxWithUser := context.WithValue(request.Context(), UserContextKey, tt.key)
-			request = request.WithContext(ctxWithUser)
+			ctxWithDeadline, cancel := context.WithTimeout(ctxWithUser, time.Second)
+			defer cancel()
+			request = request.WithContext(ctxWithDeadline)
 
 			res := httptest.NewRecorder()
 			Router(ms.app).ServeHTTP(res, request)
@@ -436,14 +442,24 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 				return
 			}
 
-			var response map[string]int
+			var response BatchStats
 			ms.decodeBody(res.Body.Bytes(), &response)
-			ms.Equal(1, response["totpComplete"])
-			ms.Equal(1, response["webauthnComplete"])
+			ms.Greater(response.TOTP.Complete, 0, "none of the TOTPs were re-encrypted")
+			ms.Less(response.TOTP.Complete, numberOfTOTPs, "test didn't cancel before completion")
+			ms.Equalf(numberOfTOTPs, response.TOTP.Complete+response.TOTP.Incomplete,
+				"total of TOTP.Complete (%d) and TOTP.Incomplete (%d) should equal the total number of TOTPs (%d)",
+				response.TOTP.Complete, response.TOTP.Incomplete, numberOfTOTPs)
+			ms.Equal(1, response.Webauthn.Complete)
 
-			totpFromDB := TOTP{UUID: totp.UUID, ApiKey: newKey.Key}
-			must(db.Load(config.TotpTable, "uuid", totp.UUID, &totpFromDB))
-			ms.Equal(newKey.Key, totpFromDB.ApiKey)
+			foundOne := false
+			for i := range totpList {
+				totpFromDB := TOTP{UUID: totpList[i].UUID, ApiKey: newKey.Key}
+				must(db.Load(config.TotpTable, "uuid", totpList[i].UUID, &totpFromDB))
+				if newKey.Key == totpFromDB.ApiKey {
+					foundOne = true
+				}
+			}
+			ms.True(foundOne, "did not find a TOTP with the new key")
 
 			dbUser := WebauthnUser{ID: user.ID, Store: db, ApiKey: newKey}
 			must(dbUser.Load())
@@ -522,10 +538,10 @@ func (ms *MfaSuite) TestApiKey_ReEncryptTOTPs() {
 
 	_ = ms.newTOTP(oldKey)
 
-	complete, incomplete, err := newKey.ReEncryptTOTPs(storage, oldKey)
+	stats, err := newKey.ReEncryptTOTPs(ms.T().Context(), storage, oldKey)
 	ms.NoError(err)
-	ms.Equal(1, complete)
-	ms.Equal(0, incomplete)
+	ms.Equal(1, stats.Complete)
+	ms.Equal(0, stats.Incomplete)
 }
 
 func (ms *MfaSuite) TestReEncryptWebAuthnUsers() {
@@ -540,10 +556,10 @@ func (ms *MfaSuite) TestReEncryptWebAuthnUsers() {
 	newKey := newTestKey()
 	must(ms.app.GetDB().Store(ms.app.GetConfig().ApiKeyTable, newKey))
 
-	complete, incomplete, err := newKey.ReEncryptWebAuthnUsers(storage, users[0].ApiKey)
+	stats, err := newKey.ReEncryptWebAuthnUsers(ms.T().Context(), storage, users[0].ApiKey)
 	ms.NoError(err)
-	ms.Equal(0, incomplete)
-	ms.Equal(1, complete)
+	ms.Equal(0, stats.Incomplete)
+	ms.Equal(1, stats.Complete)
 
 	// verify only users[0] is affected because each test user belongs to a different key
 	for i, user := range users {
@@ -585,7 +601,7 @@ func (ms *MfaSuite) TestReEncryptWebAuthnUser() {
 			must(ms.app.GetDB().Store(ms.app.GetConfig().ApiKeyTable, newKey))
 			ms.NotEqual(newKey.Secret, tt.user.ApiKey.Secret)
 
-			err = newKey.ReEncryptWebAuthnUser(storage, tt.user)
+			err = newKey.ReEncryptWebAuthnUser(ms.T().Context(), storage, tt.user)
 			ms.NoError(err)
 
 			dbUser := WebauthnUser{ID: tt.user.ID, ApiKey: newKey, Store: storage}
