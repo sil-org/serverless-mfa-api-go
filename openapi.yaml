@@ -761,7 +761,7 @@ paths:
         "401":
           $ref: "#/components/responses/UnauthorizedError"
   /totp/{uuid}/validate:
-    delete:
+    post:
       summary: Validate a TOTP
       parameters:
         - in: path
