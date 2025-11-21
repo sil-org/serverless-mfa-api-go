@@ -2,6 +2,7 @@ package mfa
 
 import (
 	"bytes"
+	"context"
 	"crypto/aes"
 	"crypto/rand"
 	"encoding/base64"
@@ -10,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"testing"
 	"time"
@@ -210,31 +212,31 @@ func (ms *MfaSuite) TestActivateApiKey() {
 	localStorage, err := NewStorage(awsConfig)
 	must(err)
 
-	key1 := ApiKey{Key: "key1"}
+	key1 := ApiKey{Key: "key1", Email: "1" + exampleEmail, CreatedAt: 1744799133000}
 	must(localStorage.Store(envConfig.ApiKeyTable, &key1))
-	key2 := ApiKey{Key: "key2", ActivatedAt: 1744799134000}
+	key2 := ApiKey{Key: "key2", Email: "2" + exampleEmail, CreatedAt: 1744799133000, ActivatedAt: 1744799134000}
 	must(localStorage.Store(envConfig.ApiKeyTable, &key2))
-	key3 := ApiKey{Key: "key3"}
+	key3 := ApiKey{Key: "key3", Email: "3" + exampleEmail, CreatedAt: 1744799133000}
 	must(localStorage.Store(envConfig.ApiKeyTable, &key3))
 
 	tests := []struct {
 		name       string
-		body       any
+		body       map[string]string
 		wantStatus int
 		wantError  error
 	}{
 		{
 			name: "not previously activated",
-			body: map[string]any{
-				"email":       exampleEmail,
+			body: map[string]string{
+				"email":       key1.Email,
 				"apiKeyValue": key1.Key,
 			},
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "already activated",
-			body: map[string]any{
-				"email":       exampleEmail,
+			body: map[string]string{
+				"email":       key2.Email,
 				"apiKeyValue": key2.Key,
 			},
 			wantStatus: http.StatusBadRequest,
@@ -242,15 +244,15 @@ func (ms *MfaSuite) TestActivateApiKey() {
 		},
 		{
 			name: "missing email",
-			body: map[string]any{
+			body: map[string]string{
 				"apiKeyValue": key3.Key,
 			},
 			wantStatus: http.StatusBadRequest,
 			wantError:  errors.New("email is required"),
 		},
 		{
-			name: "missing apiKey",
-			body: map[string]any{
+			name: "missing apiKeyValue",
+			body: map[string]string{
 				"email": exampleEmail,
 			},
 			wantStatus: http.StatusBadRequest,
@@ -258,7 +260,7 @@ func (ms *MfaSuite) TestActivateApiKey() {
 		},
 		{
 			name: "key not found",
-			body: map[string]any{
+			body: map[string]string{
 				"email":       exampleEmail,
 				"apiKeyValue": "not a key",
 			},
@@ -283,10 +285,18 @@ func (ms *MfaSuite) TestActivateApiKey() {
 			ms.Equal(http.StatusOK, res.Status, fmt.Sprintf("ActivateApiKey response: %s", res.Body))
 
 			var response struct {
-				ApiSecret string `json:"apiSecret"`
+				Email       string    `json:"email"`
+				ApiKeyValue string    `json:"apiKeyValue"`
+				ApiSecret   string    `json:"apiSecret"`
+				ActivatedAt time.Time `json:"activatedAt"`
+				CreatedAt   time.Time `json:"createdAt"`
 			}
 			ms.NoError(json.Unmarshal(res.Body, &response))
-			ms.Len(response.ApiSecret, 44)
+			ms.Regexp("^[A-Za-z0-9+/]{43}=$", response.ApiSecret, "apiSecret isn't correct")
+			ms.Equal(tt.body["email"], response.Email, "email isn't correct")
+			ms.Equal(tt.body["apiKeyValue"], response.ApiKeyValue, "apiKeyValue isn't correct")
+			ms.Equal(time.Date(2025, 4, 16, 10, 25, 33, 0, time.UTC), response.CreatedAt, "createdAt isn't correct")
+			ms.WithinDuration(time.Now().UTC(), response.ActivatedAt, time.Minute, "activatedAt isn't correct")
 		})
 	}
 }
@@ -356,7 +366,11 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 	key := user.ApiKey
 	must(db.Store(config.ApiKeyTable, key))
 
-	totp := ms.newTOTP(key)
+	const numberOfTOTPs = 1000
+	totpList := make([]TOTP, numberOfTOTPs)
+	for i := range totpList {
+		totpList[i] = ms.newTOTP(key)
+	}
 
 	newKey := newTestKey()
 	must(db.Store(config.ApiKeyTable, newKey))
@@ -364,84 +378,88 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 	tests := []struct {
 		name       string
 		body       any
+		key        ApiKey
 		wantStatus int
-		wantError  error
+		wantError  string
 	}{
 		{
-			name: "missing oldKeyId",
+			name: "missing key",
 			body: map[string]interface{}{
 				paramNewKeyId:     newKey.Key,
 				paramNewKeySecret: newKey.Secret,
-				paramOldKeySecret: key.Secret,
 			},
-			wantStatus: http.StatusBadRequest,
-			wantError:  errors.New("oldKeyId is required"),
-		},
-		{
-			name: "missing oldKeySecret",
-			body: map[string]interface{}{
-				paramNewKeyId:     newKey.Key,
-				paramNewKeySecret: newKey.Secret,
-				paramOldKeyId:     key.Key,
-			},
-			wantStatus: http.StatusBadRequest,
-			wantError:  errors.New("oldKeySecret is required"),
+			wantStatus: http.StatusUnauthorized,
+			wantError:  "Unauthorized",
 		},
 		{
 			name: "missing newKeyId",
 			body: map[string]interface{}{
 				paramNewKeySecret: newKey.Secret,
-				paramOldKeyId:     key.Key,
-				paramOldKeySecret: key.Secret,
 			},
+			key:        key,
 			wantStatus: http.StatusBadRequest,
-			wantError:  errors.New("newKeyId is required"),
+			wantError:  "newKeyId is required",
 		},
 		{
 			name: "missing newKeySecret",
 			body: map[string]interface{}{
-				paramNewKeyId:     newKey.Key,
-				paramOldKeyId:     key.Key,
-				paramOldKeySecret: key.Secret,
+				paramNewKeyId: newKey.Key,
 			},
+			key:        key,
 			wantStatus: http.StatusBadRequest,
-			wantError:  errors.New("newKeySecret is required"),
+			wantError:  "newKeySecret is required",
 		},
 		{
 			name: "good",
 			body: map[string]interface{}{
 				paramNewKeyId:     newKey.Key,
 				paramNewKeySecret: newKey.Secret,
-				paramOldKeyId:     user.ApiKey.Key,
-				paramOldKeySecret: key.Secret,
 			},
+			key:        key,
 			wantStatus: http.StatusOK,
 		},
 	}
 	for _, tt := range tests {
 		ms.Run(tt.name, func() {
-			res := &lambdaResponseWriter{Headers: http.Header{}}
-			req := requestWithUser(tt.body, key)
-			ms.app.RotateApiKey(res, req)
+			jsonBody, err := json.Marshal(tt.body)
+			must(err)
+			b := io.NopCloser(bytes.NewReader(jsonBody))
+			request, _ := http.NewRequest(http.MethodPost, "/api-key/rotate", b)
+			request.Header.Set(HeaderAPIKey, tt.key.Key)
+			request.Header.Set(HeaderAPISecret, tt.key.Secret)
 
-			if tt.wantError != nil {
-				ms.Equal(tt.wantStatus, res.Status, fmt.Sprintf("CreateApiKey response: %s", res.Body))
-				var se simpleError
-				ms.decodeBody(res.Body, &se)
-				ms.ErrorIs(se, tt.wantError)
+			ctxWithUser := context.WithValue(request.Context(), UserContextKey, tt.key)
+			ctxWithDeadline, cancel := context.WithTimeout(ctxWithUser, time.Second)
+			defer cancel()
+			request = request.WithContext(ctxWithDeadline)
+
+			res := httptest.NewRecorder()
+			Router(ms.app).ServeHTTP(res, request)
+			ms.Equal(tt.wantStatus, res.Code, "incorrect http status, body: %s", res.Body.String())
+
+			if tt.wantError != "" {
+				ms.Contains(res.Body.String(), tt.wantError)
 				return
 			}
 
-			ms.Equal(tt.wantStatus, res.Status, fmt.Sprintf("CreateApiKey response: %s", res.Body))
+			var response BatchStats
+			ms.decodeBody(res.Body.Bytes(), &response)
+			ms.Greater(response.TOTP.Complete, 0, "none of the TOTPs were re-encrypted")
+			ms.Less(response.TOTP.Complete, numberOfTOTPs, "test didn't cancel before completion")
+			ms.Equalf(numberOfTOTPs, response.TOTP.Complete+response.TOTP.Incomplete,
+				"total of TOTP.Complete (%d) and TOTP.Incomplete (%d) should equal the total number of TOTPs (%d)",
+				response.TOTP.Complete, response.TOTP.Incomplete, numberOfTOTPs)
+			ms.Equal(1, response.Webauthn.Complete)
 
-			var response map[string]int
-			ms.decodeBody(res.Body, &response)
-			ms.Equal(1, response["totpComplete"])
-			ms.Equal(1, response["webauthnComplete"])
-
-			totpFromDB := TOTP{UUID: totp.UUID, ApiKey: newKey.Key}
-			must(db.Load(config.TotpTable, "uuid", totp.UUID, &totpFromDB))
-			ms.Equal(newKey.Key, totpFromDB.ApiKey)
+			foundOne := false
+			for i := range totpList {
+				totpFromDB := TOTP{UUID: totpList[i].UUID, ApiKey: newKey.Key}
+				must(db.Load(config.TotpTable, "uuid", totpList[i].UUID, &totpFromDB))
+				if newKey.Key == totpFromDB.ApiKey {
+					foundOne = true
+				}
+			}
+			ms.True(foundOne, "did not find a TOTP with the new key")
 
 			dbUser := WebauthnUser{ID: user.ID, Store: db, ApiKey: newKey}
 			must(dbUser.Load())
@@ -520,10 +538,10 @@ func (ms *MfaSuite) TestApiKey_ReEncryptTOTPs() {
 
 	_ = ms.newTOTP(oldKey)
 
-	complete, incomplete, err := newKey.ReEncryptTOTPs(storage, oldKey)
+	stats, err := newKey.ReEncryptTOTPs(ms.T().Context(), storage, oldKey)
 	ms.NoError(err)
-	ms.Equal(1, complete)
-	ms.Equal(0, incomplete)
+	ms.Equal(1, stats.Complete)
+	ms.Equal(0, stats.Incomplete)
 }
 
 func (ms *MfaSuite) TestReEncryptWebAuthnUsers() {
@@ -538,10 +556,10 @@ func (ms *MfaSuite) TestReEncryptWebAuthnUsers() {
 	newKey := newTestKey()
 	must(ms.app.GetDB().Store(ms.app.GetConfig().ApiKeyTable, newKey))
 
-	complete, incomplete, err := newKey.ReEncryptWebAuthnUsers(storage, users[0].ApiKey)
+	stats, err := newKey.ReEncryptWebAuthnUsers(ms.T().Context(), storage, users[0].ApiKey)
 	ms.NoError(err)
-	ms.Equal(0, incomplete)
-	ms.Equal(1, complete)
+	ms.Equal(0, stats.Incomplete)
+	ms.Equal(1, stats.Complete)
 
 	// verify only users[0] is affected because each test user belongs to a different key
 	for i, user := range users {
@@ -583,7 +601,7 @@ func (ms *MfaSuite) TestReEncryptWebAuthnUser() {
 			must(ms.app.GetDB().Store(ms.app.GetConfig().ApiKeyTable, newKey))
 			ms.NotEqual(newKey.Secret, tt.user.ApiKey.Secret)
 
-			err = newKey.ReEncryptWebAuthnUser(storage, tt.user)
+			err = newKey.ReEncryptWebAuthnUser(ms.T().Context(), storage, tt.user)
 			ms.NoError(err)
 
 			dbUser := WebauthnUser{ID: tt.user.ID, ApiKey: newKey, Store: storage}

@@ -7,14 +7,19 @@ import (
 	"strings"
 )
 
+const (
+	HeaderAPIKey    = "x-mfa-apikey"
+	HeaderAPISecret = "x-mfa-apisecret"
+)
+
 type User interface{}
 
 // AuthenticateRequest checks the provided API key against the keys stored in the database. If the key is active and
 // valid, a Webauthn client and WebauthnUser are created and stored in the request context.
 func AuthenticateRequest(r *http.Request) (User, error) {
 	// get key and secret from headers
-	key := r.Header.Get("x-mfa-apikey")
-	secret := r.Header.Get("x-mfa-apisecret")
+	key := r.Header.Get(HeaderAPIKey)
+	secret := r.Header.Get(HeaderAPISecret)
 
 	if key == "" || secret == "" {
 		return nil, fmt.Errorf("x-mfa-apikey and x-mfa-apisecret are required")
