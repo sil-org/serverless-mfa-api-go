@@ -7,9 +7,6 @@ on:
     paths-ignore:
     - 'terraform/**'
 
-env:
-  ENV_NAME: ${{ startsWith(github.ref, 'refs/tags/') && 'prod' || 'dev' }}
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -57,7 +54,7 @@ jobs:
     needs: [ 'tests', 'lint' ]
     if: github.ref_name == 'main' || startsWith(github.ref, 'refs/tags/')
     environment:
-      name: ${{ env.ENV_NAME }}
+      name: ${{ startsWith(github.ref, 'refs/tags/') && 'prod' || 'dev' }}
     runs-on: ubuntu-latest
     concurrency:
       group: deploy-${{ github.ref }}-${{ matrix.region }}
