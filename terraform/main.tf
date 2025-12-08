@@ -128,6 +128,11 @@ resource "aws_dynamodb_table" "totp" {
     type = "S"
   }
 
+  attribute {
+    name = "apiKey"
+    type = "S"
+  }
+
   global_secondary_index {
     name            = "apiKeyIndex"
     hash_key        = "apiKey"
@@ -163,6 +168,11 @@ resource "aws_dynamodb_table" "webauthn" {
 
   attribute {
     name = "uuid"
+    type = "S"
+  }
+
+  attribute {
+    name = "apiKey"
     type = "S"
   }
 
