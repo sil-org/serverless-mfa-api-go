@@ -128,6 +128,12 @@ resource "aws_dynamodb_table" "totp" {
     type = "S"
   }
 
+  global_secondary_index {
+    name            = "apiKeyIndex"
+    hash_key        = "apiKey"
+    projection_type = "KEYS_ONLY"
+  }
+
   point_in_time_recovery {
     enabled = true
   }
@@ -158,6 +164,12 @@ resource "aws_dynamodb_table" "webauthn" {
   attribute {
     name = "uuid"
     type = "S"
+  }
+
+  global_secondary_index {
+    name            = "apiKeyIndex"
+    hash_key        = "apiKey"
+    projection_type = "KEYS_ONLY"
   }
 
   point_in_time_recovery {
