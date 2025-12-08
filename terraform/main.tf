@@ -136,7 +136,7 @@ resource "aws_dynamodb_table" "totp" {
   global_secondary_index {
     name            = "apiKeyIndex"
     hash_key        = "apiKey"
-    projection_type = "KEYS_ONLY"
+    projection_type = "ALL"
   }
 
   point_in_time_recovery {
@@ -179,7 +179,7 @@ resource "aws_dynamodb_table" "webauthn" {
   global_secondary_index {
     name            = "apiKeyIndex"
     hash_key        = "apiKey"
-    projection_type = "KEYS_ONLY"
+    projection_type = "ALL"
   }
 
   point_in_time_recovery {
