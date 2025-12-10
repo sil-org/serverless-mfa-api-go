@@ -8,9 +8,9 @@ import (
 	mfa "github.com/sil-org/serverless-mfa-api-go"
 )
 
-// authenticationMiddleware gets API key information from request headers and validates the key/signature
-// Then it uses api meta information provided in headers to configure a webauthn client and fetch the
-// user from storage and attach to context.
+// authenticationMiddleware gets API key information from request headers and validates the key/signature.
+// If the key is active and valid an authenticated user (e.g. Webauthn user and client) is added to the request
+// context.
 func authenticationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, err := mfa.AuthenticateRequest(r)
