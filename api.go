@@ -31,8 +31,8 @@ func (s simpleError) Is(err error) bool { return s.Err == err.Error() || errors.
 
 // jsonResponse encodes a body as JSON and writes it to the response. It sets the response Content-Type header to
 // "application/json".
-func jsonResponse(w http.ResponseWriter, body interface{}, status int) {
-	var data interface{}
+func jsonResponse(w http.ResponseWriter, body any, status int) {
+	var data any
 	switch b := body.(type) {
 	case error:
 		data = newSimpleError(b)

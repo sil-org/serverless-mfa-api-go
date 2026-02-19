@@ -315,14 +315,14 @@ func (ms *MfaSuite) TestCreateApiKey() {
 	}{
 		{
 			name: "success",
-			body: map[string]interface{}{
+			body: map[string]any{
 				"email": exampleEmail,
 			},
 			wantStatus: http.StatusOK,
 		},
 		{
 			name:       "missing email",
-			body:       map[string]interface{}{},
+			body:       map[string]any{},
 			wantStatus: http.StatusBadRequest,
 			wantError:  errors.New("email is required"),
 		},
@@ -384,7 +384,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 	}{
 		{
 			name: "missing key",
-			body: map[string]interface{}{
+			body: map[string]any{
 				paramNewKeyId:     newKey.Key,
 				paramNewKeySecret: newKey.Secret,
 			},
@@ -393,7 +393,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 		},
 		{
 			name: "missing newKeyId",
-			body: map[string]interface{}{
+			body: map[string]any{
 				paramNewKeySecret: newKey.Secret,
 			},
 			key:        key,
@@ -402,7 +402,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 		},
 		{
 			name: "missing newKeySecret",
-			body: map[string]interface{}{
+			body: map[string]any{
 				paramNewKeyId: newKey.Key,
 			},
 			key:        key,
@@ -411,7 +411,7 @@ func (ms *MfaSuite) TestAppRotateApiKey() {
 		},
 		{
 			name: "good",
-			body: map[string]interface{}{
+			body: map[string]any{
 				paramNewKeyId:     newKey.Key,
 				paramNewKeySecret: newKey.Secret,
 			},

@@ -32,12 +32,12 @@ func NewStorage(config aws.Config) (*Storage, error) {
 }
 
 // Store puts item at key.
-func (s *Storage) Store(table string, item interface{}) error {
+func (s *Storage) Store(table string, item any) error {
 	return s.StoreCtx(context.Background(), table, item)
 }
 
 // StoreCtx puts item at key. This is a context-aware equivalent of Store.
-func (s *Storage) StoreCtx(ctx context.Context, table string, item interface{}) error {
+func (s *Storage) StoreCtx(ctx context.Context, table string, item any) error {
 	av, err := attributevalue.MarshalMap(item)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (s *Storage) StoreCtx(ctx context.Context, table string, item interface{}) 
 }
 
 // Load retrieves the value at key and unmarshals it into item.
-func (s *Storage) Load(table, attrName, attrVal string, item interface{}) error {
+func (s *Storage) Load(table, attrName, attrVal string, item any) error {
 	if table == "" {
 		return tableNameMissingError
 	}

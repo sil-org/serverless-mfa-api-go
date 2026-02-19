@@ -19,7 +19,7 @@ func (ms *MfaSuite) TestStorage_StoreLoad() {
 	}
 	type args struct {
 		key  string
-		item interface{}
+		item any
 	}
 	tests := []struct {
 		name    string
