@@ -1,19 +1,22 @@
+version: "2"
 run:
     timeout: 2m
 linters:
-    disable-all: true
+    disable:
+      - staticcheck
+      - unused
     enable:
 #    - errcheck
 #    - gosimple
 #    - govet
 #    - ineffassign
-#    - staticcheck
-#    - unused
     - bodyclose
     - gocheckcompilerdirectives
     - godox
-#    - gofmt
-#    - goimports
 #    - gosec
 #    - whitespace
 #    - usestdlibvars
+formatters:
+  enable:
+    - gofmt
+    - goimports

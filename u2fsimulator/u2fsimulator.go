@@ -59,8 +59,8 @@ func fixStringEncoding(content string) string {
 	return content
 }
 
-func jsonResponse(w http.ResponseWriter, body interface{}, status int) {
-	var data interface{}
+func jsonResponse(w http.ResponseWriter, body any, status int) {
+	var data any
 	switch b := body.(type) {
 	case error:
 		data = struct {
@@ -250,8 +250,8 @@ func GetAttestationObject(authDataBytes, clientData []byte, keyHandle string, pr
 		Format: "fido-u2f",
 
 		RawAuthData: authDataBytes,
-		AttStatement: map[string]interface{}{
-			`x5c`: []interface{}{attestationCertBytes},
+		AttStatement: map[string]any{
+			`x5c`: []any{attestationCertBytes},
 			`sig`: signature,
 		},
 	}

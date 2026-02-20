@@ -1,6 +1,6 @@
 module cdk
 
-go 1.24
+go 1.25
 
 require (
 	github.com/aws/aws-cdk-go/awscdk/v2 v2.185.0

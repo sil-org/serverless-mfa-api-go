@@ -1,4 +1,1 @@
-* @sil-org/developers
-*.tf @sil-org/tf-devs
-*.go @sil-org/go-devs
-go.* @sil-org/go-devs
+* @sil-org/go-devs
