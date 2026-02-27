@@ -18,10 +18,15 @@ func NewMux(app *mfa.App) *http.ServeMux {
 
 // getRoutes returns a list of routes for the server
 func getRoutes(app *mfa.App) map[string]http.HandlerFunc {
+	noContentHandler := func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}
+
 	return map[string]http.HandlerFunc{
 		"POST /api-key/activate":                            app.ActivateApiKey,
 		"POST /api-key/rotate":                              app.RotateApiKey,
 		"POST /api-key":                                     app.CreateApiKey,
+		"GET /status":                                       noContentHandler,
 		"POST /totp":                                        app.CreateTOTP,
 		"DELETE /totp/{" + mfa.UUIDParam + "}":              app.DeleteTOTP,
 		"POST /totp/{" + mfa.UUIDParam + "}/validate":       app.ValidateTOTP,

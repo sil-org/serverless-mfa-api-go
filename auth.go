@@ -17,6 +17,10 @@ type User any
 // AuthenticateRequest checks the provided API key against the keys stored in the database. If the key is active and
 // valid, an authentication user (e.g. Webauthn user and client) is created and returned.
 func AuthenticateRequest(r *http.Request) (User, error) {
+	if r.Method == http.MethodGet && r.RequestURI == "/status" {
+		return nil, nil
+	}
+
 	// get key and secret from headers
 	key := r.Header.Get(HeaderAPIKey)
 	secret := r.Header.Get(HeaderAPISecret)
