@@ -628,7 +628,7 @@ func (ms *MfaSuite) Test_FinishLogin() {
 	ctxUserCred1 := context.WithValue(reqWithBody1.Context(), UserContextKey, userWithCreds)
 	reqWithBody1 = *reqWithBody1.WithContext(ctxUserCred1)
 
-	signature2 := GenerateAuthenticationSig(authDataBytes2, cdBytes, privateKey1)
+	signature2 := GenerateAuthenticationSig(authDataBytes2, cdBytes, privateKey2)
 
 	assertionResponse2 := `{
 		  "id":"` + credIDEncoded2 + `",
