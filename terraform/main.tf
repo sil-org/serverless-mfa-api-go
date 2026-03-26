@@ -6,35 +6,7 @@ locals {
 
 data "aws_caller_identity" "this" {}
 
-# CDK IAM user
-resource "aws_iam_user" "cdk" {
-  name = "${var.app_name}-${var.app_env}-cdk"
-}
-
-resource "aws_iam_access_key" "cdk" {
-  user = aws_iam_user.cdk.name
-}
-
-resource "aws_iam_policy" "cdk" {
-  name        = "${var.app_name}-${var.app_env}-cdk"
-  description = "CDK deployment policy"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = "sts:AssumeRole"
-      Resource = "arn:aws:iam::*:role/cdk-*"
-    }]
-  })
-}
-
-resource "aws_iam_user_policy_attachment" "cdk" {
-  user       = aws_iam_user.cdk.name
-  policy_arn = aws_iam_policy.cdk.arn
-}
-
-# Role for SES alerts during deployment
+# Role for CDK deployment and CI/CD alerts using SES
 
 resource "aws_iam_role" "cd" {
   description = "for GitHub Actions in sil-org/serverless-mfa-api-go to send SES email alerts"
@@ -67,6 +39,11 @@ resource "aws_iam_role_policy" "cd" {
   policy = jsonencode({
     "Version" : "2012-10-17",
     "Statement" : [
+      {
+        Effect   = "Allow"
+        Action   = "sts:AssumeRole"
+        Resource = "arn:aws:iam::*:role/cdk-*"
+      },
       {
         Sid       = "SendEmailAlerts"
         Effect    = "Allow"

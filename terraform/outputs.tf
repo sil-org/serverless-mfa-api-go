@@ -1,3 +1,7 @@
+output "cd_role_arn" {
+  value = aws_iam_role.cd.arn
+}
+
 output "lambda_role_arn" {
   value = aws_iam_role.lambdaRole.arn
 }
