@@ -1,0 +1,25 @@
+name: govulncheck
+on:
+  push:
+  schedule: # Every day at 6:08am UTC
+    - cron: '8 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_CD_ROLE_ARN: ${{ secrets.AWS_CD_ROLE_ARN }}
+  FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+  TO_EMAIL: ${{ secrets.TO_EMAIL }}
+
+jobs:
+  govulncheck:
+    uses: sil-org/workflows/.github/workflows/govulncheck.yml@main
+    with:
+      go-version-file: 'go.mod'
+      aws-region: 'us-east-1'
+      aws-role: ${{ env.AWS_CD_ROLE_ARN }}
+      from-email: ${{ env.FROM_EMAIL }}
+      to-email: ${{ env.TO_EMAIL }}

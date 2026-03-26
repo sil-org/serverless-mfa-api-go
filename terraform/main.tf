@@ -34,6 +34,50 @@ resource "aws_iam_user_policy_attachment" "cdk" {
   policy_arn = aws_iam_policy.cdk.arn
 }
 
+# Role for SES alerts during deployment
+
+resource "aws_iam_role" "cd" {
+  description = "for GitHub Actions in sil-org/serverless-mfa-api-go to send SES email alerts"
+  name        = "${var.app_name}-${var.app_env}-cd"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid    = "GitHub"
+      Effect = "Allow"
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Principal = {
+        Federated = data.tfe_outputs.appsdev_aws_account_silidp.nonsensitive_values.github_oidc_provider_arn
+      }
+      Condition = {
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com"
+        },
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" : "repo:sil-org/serverless-mfa-api-go:*"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "cd" {
+  name = "${var.app_name}-${var.app_env}-cd"
+  role = aws_iam_role.cd.name
+
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        Sid       = "SendEmailAlerts"
+        Effect    = "Allow"
+        Action    = ["ses:SendEmail"]
+        Resource  = data.tfe_outputs.appsdev_aws_account_silidp.nonsensitive_values.ses_domain_identity_us_east_1_arn,
+        Condition = { StringEquals = { "ses:FromAddress" = "no_reply@ses.iidp.net" } }
+      },
+    ]
+  })
+}
+
 // Set up custom domain name for easier fail-over.
 module "dns_for_failover" {
   source  = "sil-org/serverless-api-dns-for-failover/aws"
@@ -193,4 +237,9 @@ resource "aws_dynamodb_table" "webauthn" {
   lifecycle {
     ignore_changes = [replica]
   }
+}
+
+data "tfe_outputs" "appsdev_aws_account_silidp" {
+  organization = "gtis"
+  workspace    = "appsdev-aws-account-silidp"
 }
