@@ -14,6 +14,7 @@ jobs:
     uses: sil-org/workflows/.github/workflows/govulncheck.yaml@main
     with:
       go-version-file: 'go.mod'
+      go-version-input: ''
       aws-region: 'us-east-1'
       aws-role: ${{ vars.AWS_CD_ROLE_ARN }}
       from-email: ${{ vars.FROM_EMAIL }}
