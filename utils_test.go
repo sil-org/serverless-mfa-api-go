@@ -107,13 +107,6 @@ func encodeBase64(buf []byte) string {
 	return strings.TrimRight(s, "=")
 }
 
-// SignResponse as defined by the FIDO U2F Javascript API.
-type SignResponse struct {
-	KeyHandle     string `json:"keyHandle"`
-	SignatureData string `json:"signatureData"`
-	ClientData    string `json:"clientData"`
-}
-
 // ClientData as defined by the FIDO U2F Raw Message Formats specification.
 type ClientData struct {
 	Typ          string          `json:"type"`
