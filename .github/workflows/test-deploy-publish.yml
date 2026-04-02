@@ -84,6 +84,11 @@ jobs:
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ vars.AWS_CD_ROLE_ARN }}
 
+      - name: Resolve AWS account id and region for CDK
+        run: |
+          echo "CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+          echo "CDK_DEFAULT_REGION=${{ matrix.region }}" >> $GITHUB_ENV
+
       - name: Build
         run: CGO_ENABLED=0 go build -tags lambda.norpc -ldflags="-s -w" -o bootstrap ./lambda
 
