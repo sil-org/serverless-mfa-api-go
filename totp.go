@@ -44,7 +44,7 @@ type TOTP struct {
 	// their authenticator app.
 	ImageURL string `dynamodbav:"-" json:"-"`
 
-	// OTPAuthURL is a otpauth URI like "otpauth://totp/idp:john_doe?secret=G5KFM3LNJ5NWQP3O&issuer=idp" that contains
+	// OTPAuthURL is an otpauth URI like "otpauth://totp/idp:john_doe?secret=G5KFM3LNJ5NWQP3O&issuer=idp" that contains
 	// the password secret key. It may also contain metadata like issuer, algorithm, and number of digits.
 	OTPAuthURL string `dynamodbav:"-" json:"-"`
 }

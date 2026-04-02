@@ -136,7 +136,7 @@ proxy container to keep tabs on the progress.
 
 To exercise the API as it would be used in AWS Lambda, run this command: `air -c .air-cdk.toml`. This will run a
 file watcher that will rebuild the app code and the CDK stack, then run `sam local start-api` using the generated
-Cloudformation template. This will listen on port 8160. Any code changes will trigger a rebuild and SAM will restart
+CloudFormation template. This will listen on port 8160. Any code changes will trigger a rebuild and SAM will restart
 using the new code.
 
 Implementation notes:

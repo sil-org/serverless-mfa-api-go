@@ -33,13 +33,22 @@ const (
 	// including the UserPresent (UP) and AttestedCredentialData (AT) flags would be done
 	// by using the value 65.
 	// AT(64) + UP(1) = 65
-	AttObjFlagUserPresent_UP      = 1
-	AttObjFlagUserVerified_UV     = 2
-	AttObjFlagAttestedCredData_AT = 64
-	AttObjFlagExtensionData_ED    = 128
+	// See https://www.w3.org/TR/webauthn-2/#flags.
+
+	// AttObjFlagUserPresent (UP) is the flag that indicates the user is present (UP).
+	AttObjFlagUserPresent = 1
+
+	// AttObjFlagUserVerified is the flag that indicates the user is verified (UV).
+	AttObjFlagUserVerified = 2
+
+	// AttObjFlagAttestedCredData is the flag that indicates attested credential data is included (AT).
+	AttObjFlagAttestedCredData = 64
+
+	// AttObjFlagExtensionData is the flag that indicates extension data is included (ED).
+	AttObjFlagExtensionData = 128
 )
 
-// Internal type for ASN1 coercion
+// DsaSignature is an internal type for ASN1 coercion
 type DsaSignature struct {
 	R, S *big.Int
 }
@@ -128,7 +137,7 @@ func GetAuthDataAndPrivateKey(rpID, keyHandle string) (authDataStr string, authD
 		authData = append(authData, r)
 	}
 
-	authData = append(authData, byte(AttObjFlagAttestedCredData_AT+AttObjFlagUserPresent_UP)) // AT & UP flags
+	authData = append(authData, byte(AttObjFlagAttestedCredData+AttObjFlagUserPresent)) // AT & UP flags
 
 	// Add 4 bytes for counter = 0 (for now, just make it 0)
 	authData = append(authData, []byte{byte(0), byte(0), byte(0), byte(0)}...)

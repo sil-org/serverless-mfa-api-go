@@ -1,6 +1,5 @@
 name: govulncheck
 on:
-  push:
   schedule: # Every day at 6:08am UTC
     - cron: '8 6 * * *'
   workflow_dispatch:

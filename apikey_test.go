@@ -139,7 +139,7 @@ func TestApiKey_EncryptDecrypt(t *testing.T) {
 			}
 
 			if !bytes.Equal(tt.plaintext, decrypted) {
-				t.Errorf("results from decypt do not match expected. Got: %s, wanted: %s", decrypted, tt.plaintext)
+				t.Errorf("results from decrypt do not match expected. Got: %s, wanted: %s", decrypted, tt.plaintext)
 				return
 			}
 		})
