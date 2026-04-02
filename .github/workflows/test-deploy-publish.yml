@@ -22,8 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: us-east-1
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -97,8 +95,6 @@ jobs:
           API_KEY_TABLE: ${{ vars.API_KEY_TABLE }}
           TOTP_TABLE: ${{ vars.TOTP_TABLE }}
           WEBAUTHN_TABLE: ${{ vars.WEBAUTHN_TABLE }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           AWS_ACCOUNT_ID: ${{ steps.configure-aws.outputs.aws-account-id }}
         run: cd cdk && cdk deploy --require-approval never
