@@ -87,6 +87,10 @@ jobs:
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ vars.AWS_CD_ROLE_ARN }}
 
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+
       - name: Build
         run: CGO_ENABLED=0 go build -tags lambda.norpc -ldflags="-s -w" -o bootstrap ./lambda
 
