@@ -1,7 +1,8 @@
 name: govulncheck
 on:
-  schedule: # Every day at 6:08am UTC
-    - cron: '8 6 * * *'
+  schedule:
+    # Weekdays at 00:00 UTC
+    - cron: '0 0 * * 1-5'
   workflow_dispatch:
 
 permissions:
