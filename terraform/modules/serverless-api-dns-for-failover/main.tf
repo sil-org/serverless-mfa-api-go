@@ -1,7 +1,7 @@
 
 locals {
-  aws_region           = data.aws_region.primary.name
-  aws_region_secondary = data.aws_region.secondary.name
+  aws_region           = data.aws_region.primary.region
+  aws_region_secondary = data.aws_region.secondary.region
 }
 
 data "aws_region" "primary" {}

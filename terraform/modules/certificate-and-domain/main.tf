@@ -15,7 +15,9 @@ module "domain" {
 
 
 data "cloudflare_zone" "this" {
-  name = var.cloudflare_zone_name
+  filter = {
+    name = var.cloudflare_zone_name
+  }
 }
 
 resource "aws_acm_certificate" "this" {
@@ -27,14 +29,15 @@ resource "aws_acm_certificate" "this" {
   }
 }
 
-resource "cloudflare_record" "validation" {
+resource "cloudflare_dns_record" "validation" {
   count = var.create_dns_validation ? 1 : 0
 
   name    = tolist(aws_acm_certificate.this.domain_validation_options)[0].resource_record_name
-  value   = tolist(aws_acm_certificate.this.domain_validation_options)[0].resource_record_value
+  content = tolist(aws_acm_certificate.this.domain_validation_options)[0].resource_record_value
   type    = tolist(aws_acm_certificate.this.domain_validation_options)[0].resource_record_type
   zone_id = data.cloudflare_zone.this.id
   proxied = false
+  ttl     = 1
 }
 
 resource "aws_acm_certificate_validation" "this" {
