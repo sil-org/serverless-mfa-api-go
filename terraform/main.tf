@@ -57,8 +57,7 @@ resource "aws_iam_role_policy" "cd" {
 
 // Set up custom domain name for easier fail-over.
 module "dns_for_failover" {
-  source  = "sil-org/serverless-api-dns-for-failover/aws"
-  version = "~> 0.6.0"
+  source = "./modules/serverless-api-dns-for-failover"
 
   api_name             = local.api_name
   cloudflare_zone_name = var.cloudflare_domain
