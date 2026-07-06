@@ -88,24 +88,50 @@ resource "aws_iam_role" "lambdaRole" {
   })
 }
 
-data "template_file" "lambdaRolePolicy" {
-  template = file("${path.module}/lambda-role-policy.json")
-  vars = {
-    aws_account = local.aws_account
-    app_name    = var.app_name
-    app_env     = var.app_env
-    table_arns = join(",", [
-      "\"arn:aws:dynamodb:*:${local.aws_account}:table/${aws_dynamodb_table.api_key.name}\"",
-      "\"arn:aws:dynamodb:*:${local.aws_account}:table/${aws_dynamodb_table.webauthn.name}\"",
-      "\"arn:aws:dynamodb:*:${local.aws_account}:table/${aws_dynamodb_table.totp.name}\"",
-    ])
+data "aws_iam_policy_document" "lambda_role_policy" {
+  statement {
+    actions = [
+      "logs:CreateLogStream",
+      "logs:CreateLogGroup",
+    ]
+    resources = [
+      "arn:aws:logs:*:${local.aws_account}:log-group:/aws/lambda/${var.app_name}-${var.app_env}*:*",
+    ]
+  }
+  statement {
+    actions = [
+      "logs:PutLogEvents",
+    ]
+    resources = [
+      "arn:aws:logs:*:${local.aws_account}:log-group:/aws/lambda/${var.app_name}-${var.app_env}*:*:*",
+    ]
+  }
+  statement {
+    actions = [
+      "ses:SendEmail",
+    ]
+    resources = ["*"]
+  }
+  statement {
+    actions = [
+      "dynamodb:Query",
+      "dynamodb:Scan",
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:DeleteItem",
+    ]
+    resources = [
+      "arn:aws:dynamodb:*:${local.aws_account}:table/${aws_dynamodb_table.api_key.name}",
+      "arn:aws:dynamodb:*:${local.aws_account}:table/${aws_dynamodb_table.webauthn.name}",
+      "arn:aws:dynamodb:*:${local.aws_account}:table/${aws_dynamodb_table.totp.name}",
+    ]
   }
 }
 
 resource "aws_iam_role_policy" "lambdaRolePolicy" {
   name   = "${var.app_name}-${var.app_env}-lambdaRolePolicy"
   role   = aws_iam_role.lambdaRole.id
-  policy = data.template_file.lambdaRolePolicy.rendered
+  policy = data.aws_iam_policy_document.lambda_role_policy.json
 }
 
 // DynamoDB tables
