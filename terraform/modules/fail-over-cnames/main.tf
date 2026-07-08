@@ -33,8 +33,8 @@ resource "cloudflare_dns_record" "public_cname" {
 }
 
 moved {
-  from = "cloudflare_record.public_cname"
-  to   = "cloudflare_dns_record.public_cname"
+  from = cloudflare_record.public_cname
+  to   = cloudflare_dns_record.public_cname
 }
 
 // Example: "api-us-east-1.example.com" --> "d-abcde12345.execute-api.us-east-1.amazonaws.com"
@@ -49,8 +49,8 @@ resource "cloudflare_dns_record" "primary_region_cname" {
 }
 
 moved {
-  from = "cloudflare_record.primary_region_cname"
-  to   = "cloudflare_dns_record.primary_region_cname"
+  from = cloudflare_record.primary_region_cname
+  to   = cloudflare_dns_record.primary_region_cname
 }
 
 // Example: "api-us-west-2.example.com" --> "d-zyxwv67890.execute-api.us-west-2.amazonaws.com"
@@ -65,6 +65,6 @@ resource "cloudflare_dns_record" "secondary_region_cname" {
 }
 
 moved {
-  from = "cloudflare_record.secondary_region_cname"
-  to   = "cloudflare_dns_record.secondary_region_cname"
+  from = cloudflare_record.secondary_region_cname
+  to   = cloudflare_dns_record.secondary_region_cname
 }

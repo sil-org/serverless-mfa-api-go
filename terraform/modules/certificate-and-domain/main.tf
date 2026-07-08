@@ -41,8 +41,8 @@ resource "cloudflare_dns_record" "validation" {
 }
 
 moved {
-  from = "cloudflare_record.validation[0]"
-  to   = "cloudflare_dns_record.validation[0]"
+  from = cloudflare_record.validation[0]
+  to   = cloudflare_dns_record.validation[0]
 }
 
 resource "aws_acm_certificate_validation" "this" {
