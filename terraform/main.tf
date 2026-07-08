@@ -9,7 +9,7 @@ data "aws_caller_identity" "this" {}
 # Role for CDK deployment and CI/CD alerts using SES
 
 resource "aws_iam_role" "cd" {
-  description = "for GitHub Actions in sil-org/serverless-mfa-api-go to send SES email alerts"
+  description = "for GitHub Actions to deploy app with CDK and to send email alerts with SES"
   name        = "${var.app_name}-${var.app_env}-cd"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -18,14 +18,14 @@ resource "aws_iam_role" "cd" {
       Effect = "Allow"
       Action = "sts:AssumeRoleWithWebIdentity"
       Principal = {
-        Federated = data.tfe_outputs.appsdev_aws_account_silidp.nonsensitive_values.github_oidc_provider_arn
+        Federated = var.github_oidc_provider_arn
       }
       Condition = {
         StringEquals = {
           "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com"
         },
         StringLike = {
-          "token.actions.githubusercontent.com:sub" : "repo:sil-org/serverless-mfa-api-go:*"
+          "token.actions.githubusercontent.com:sub" : "repo:${var.github_repository}:*"
         }
       }
     }]
@@ -48,8 +48,8 @@ resource "aws_iam_role_policy" "cd" {
         Sid       = "SendEmailAlerts"
         Effect    = "Allow"
         Action    = ["ses:SendEmail"]
-        Resource  = data.tfe_outputs.appsdev_aws_account_silidp.nonsensitive_values.ses_domain_identity_us_east_1_arn,
-        Condition = { StringEquals = { "ses:FromAddress" = "no_reply@ses.iidp.net" } }
+        Resource  = var.ses_domain_identity_arn,
+        Condition = { StringEquals = { "ses:FromAddress" = var.alerts_email } }
       },
     ]
   })
@@ -247,9 +247,4 @@ resource "aws_dynamodb_table" "webauthn" {
   lifecycle {
     ignore_changes = [replica]
   }
-}
-
-data "tfe_outputs" "appsdev_aws_account_silidp" {
-  organization = "gtis"
-  workspace    = "appsdev-aws-account-silidp"
 }
