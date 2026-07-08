@@ -40,6 +40,11 @@ resource "cloudflare_dns_record" "validation" {
   ttl     = 1
 }
 
+moved {
+  from = "cloudflare_record.validation"
+  to   = "cloudflare_dns_record.validation"
+}
+
 resource "aws_acm_certificate_validation" "this" {
   certificate_arn = aws_acm_certificate.this.arn
 }
