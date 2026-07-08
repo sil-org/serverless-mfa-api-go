@@ -1,21 +1,18 @@
 
 terraform {
-  required_version = ">= 1.0"
+  # Terraform 1.8 is required for cross-resource moving of resources, which is used in this module to move the
+  # Cloudflare DNS records from the old resource name (cloudflare_record) to the new resource name
+  # (cloudflare_dns_record).
+  required_version = ">= 1.8"
   required_providers {
-
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 4.0.0, < 6.0.0"
+      version = "~> 6.0"
     }
 
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = ">= 2.0.0, < 4.39.0"
-    }
-
-    template = {
-      source  = "hashicorp/template"
-      version = "~> 2.2"
+      version = "~> 5.0"
     }
   }
 }
