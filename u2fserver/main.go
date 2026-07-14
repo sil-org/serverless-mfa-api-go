@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -9,14 +9,17 @@ import (
 )
 
 func main() {
-	log.SetOutput(os.Stdout)
-	log.Println("U2f Simulator Server starting...")
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	slog.Info("U2f Simulator Server starting...")
 
 	// ListenAndServe starts an HTTP server with a given address and
 	// handler defined in NewRouter.
-	log.Println("Starting service on port 8080")
+	slog.Info("Starting service on port 8080")
 	router := newRouter()
-	log.Fatal(http.ListenAndServe(":8080", router))
+	if err := http.ListenAndServe(":8080", router); err != nil {
+		slog.Error("server stopped", "error", err)
+		os.Exit(1)
+	}
 }
 
 // newRouter forms a new http.ServeMux

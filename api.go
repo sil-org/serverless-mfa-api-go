@@ -3,7 +3,7 @@ package mfa
 import (
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -52,7 +52,7 @@ func jsonResponse(w http.ResponseWriter, body any, status int) {
 			// where user input is inserted into the error message, I'll just sanitize it as recommended.
 			sanitizedError := strings.ReplaceAll(strings.ReplaceAll(err.Error(), "\n", "_"), "\r", "_")
 
-			log.Printf("failed to marshal response body to json: %s", sanitizedError)
+			slog.Error("failed to marshal response body to json", "error", sanitizedError)
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte("failed to marshal response body to json"))
 			return
@@ -63,7 +63,7 @@ func jsonResponse(w http.ResponseWriter, body any, status int) {
 	w.WriteHeader(status)
 	_, err = w.Write(jBody)
 	if err != nil {
-		log.Printf("failed to write response in jsonResponse: %s", err)
+		slog.Error("failed to write response in jsonResponse", "error", err)
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"strings"
@@ -84,7 +84,7 @@ func jsonResponse(w http.ResponseWriter, body any, status int) {
 	if data != nil {
 		jBody, err = json.Marshal(data)
 		if err != nil {
-			log.Printf("failed to marshal response body to json: %s", err)
+			slog.Error("failed to marshal response body to json", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte("failed to marshal response body to json"))
 			return
@@ -95,7 +95,7 @@ func jsonResponse(w http.ResponseWriter, body any, status int) {
 	w.WriteHeader(status)
 	_, err = w.Write(jBody)
 	if err != nil {
-		log.Printf("failed to write response in jsonResponse: %s", err)
+		slog.Error("failed to write response in jsonResponse", "error", err)
 	}
 }
 
@@ -316,7 +316,7 @@ func U2fRegistration(w http.ResponseWriter, r *http.Request) {
 	if err := json.Unmarshal(reqBody, &reqParams); err != nil {
 		panic(err)
 	}
-	log.Printf("U2fRegistration httpRequest: %v", reqParams)
+	slog.Info("U2fRegistration httpRequest", "reqParams", reqParams)
 
 	challenge := reqParams["challenge"]
 	if challenge == "" {

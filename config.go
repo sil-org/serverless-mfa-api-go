@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -49,5 +49,5 @@ func (e *EnvConfig) String() string {
 
 func SetConfig(c EnvConfig) {
 	envConfig = c
-	log.Println("config:", envConfig.String())
+	slog.Info("config loaded", "config", envConfig.String())
 }

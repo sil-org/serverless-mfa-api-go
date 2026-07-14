@@ -2,7 +2,7 @@ package router
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 
 	mfa "github.com/sil-org/serverless-mfa-api-go"
@@ -15,7 +15,7 @@ func authenticationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, err := mfa.AuthenticateRequest(r)
 		if err != nil {
-			log.Printf("unable to authenticate request: %s", err)
+			slog.Error("unable to authenticate request", "error", err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}

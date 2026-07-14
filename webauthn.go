@@ -5,13 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 )
+
+const failedToGetUser = "failed to get user"
 
 // WebauthnMeta holds metadata about the calling service for use in WebAuthn responses.
 // Since this service/api is consumed by multiple sources this information cannot
@@ -46,9 +48,11 @@ type finishLoginResponse struct {
 // BeginRegistration processes the first half of the Webauthn Registration flow. It is the handler for the
 // "POST /webauthn/register" endpoint, initiated by the client when creation of a new passkey is requested.
 func (a *App) BeginRegistration(w http.ResponseWriter, r *http.Request) {
+	const beginRegistration = "BeginRegistration"
+
 	user, err := getWebauthnUser(r)
 	if err != nil {
-		log.Printf("failed to get user for BeginRegistration: %s", err)
+		slog.Error(failedToGetUser, "handler", beginRegistration, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
@@ -60,7 +64,7 @@ func (a *App) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 
 	options, err := user.BeginRegistration()
 	if err != nil {
-		log.Printf("failed to begin registration: %s", err)
+		slog.Error("failed to begin registration", "handler", beginRegistration, "error", err)
 		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
@@ -76,16 +80,18 @@ func (a *App) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 // FinishRegistration processes the last half of the Webauthn Registration flow. It is the handler for the
 // "PUT /webauthn/register" endpoint, initiated by the client with information encrypted by the new private key.
 func (a *App) FinishRegistration(w http.ResponseWriter, r *http.Request) {
+	const finishRegistration = "FinishRegistration"
+
 	user, err := getWebauthnUser(r)
 	if err != nil {
-		log.Printf("failed to get user for FinishRegistration: %s", err)
+		slog.Error(failedToGetUser, "handler", finishRegistration, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
 	keyHandleHash, err := user.FinishRegistration(r)
 	if err != nil {
-		log.Printf("failed to finish registration: %s", err)
+		slog.Error("failed to finish registration", "handler", finishRegistration, "error", err)
 		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
@@ -100,16 +106,18 @@ func (a *App) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 // BeginLogin processes the first half of the Webauthn Authentication flow. It is the handler for the
 // "POST /webauthn/login" endpoint, initiated by the client at the beginning of a login request.
 func (a *App) BeginLogin(w http.ResponseWriter, r *http.Request) {
+	const beginLogin = "BeginLogin"
+
 	user, err := getWebauthnUser(r)
 	if err != nil {
-		log.Printf("failed to get user for BeginLogin: %s", err)
+		slog.Error(failedToGetUser, "handler", beginLogin, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
 	options, err := user.BeginLogin()
 	if err != nil {
-		log.Printf("error beginning user login: %s", err)
+		slog.Error("error beginning user login", "handler", beginLogin, "error", err)
 		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
@@ -120,9 +128,11 @@ func (a *App) BeginLogin(w http.ResponseWriter, r *http.Request) {
 // FinishLogin processes the second half of the Webauthn Authentication flow. It is the handler for the
 // "PUT /webauthn/login" endpoint, initiated by the client with login data signed with the private key.
 func (a *App) FinishLogin(w http.ResponseWriter, r *http.Request) {
+	const finishLogin = "FinishLogin"
+
 	user, err := getWebauthnUser(r)
 	if err != nil {
-		log.Printf("failed to get user for FinishLogin: %s", err)
+		slog.Error(failedToGetUser, "handler", finishLogin, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
@@ -132,7 +142,7 @@ func (a *App) FinishLogin(w http.ResponseWriter, r *http.Request) {
 		// SonarQube flagged this as vulnerable to injection attacks. Rather than exhaustively search for places
 		// where user input is inserted into the error message, I'll just sanitize it as recommended.
 		sanitizedError := strings.ReplaceAll(strings.ReplaceAll(err.Error(), "\n", "_"), "\r", "_")
-		log.Printf("error finishing user login: %s", sanitizedError)
+		slog.Error("failed finishing user login", "handler", finishLogin, "error", sanitizedError)
 
 		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
@@ -148,15 +158,17 @@ func (a *App) FinishLogin(w http.ResponseWriter, r *http.Request) {
 // DeleteUser is the handler for the "DELETE /webauthn/user" endpoint. It removes a user and any stored passkeys owned
 // by the user.
 func (a *App) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	const deleteUser = "DeleteUser"
+
 	user, err := getWebauthnUser(r)
 	if err != nil {
-		log.Printf("failed to get user for DeleteUser: %s", err)
+		slog.Error(failedToGetUser, "handler", deleteUser, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
 	if err := user.Delete(); err != nil {
-		log.Printf("error deleting user: %s", err)
+		slog.Error("error deleting user", "handler", deleteUser, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
@@ -168,9 +180,11 @@ func (a *App) DeleteUser(w http.ResponseWriter, r *http.Request) {
 // passkey identified by "credID", which is the key_handle_hash returned by the FinishRegistration endpoint, or "u2f"
 // if it is a legacy U2F credential, in which case that user is saved with all of its legacy u2f fields blanked out.
 func (a *App) DeleteCredential(w http.ResponseWriter, r *http.Request) {
+	const deleteCredential = "DeleteCredential"
+
 	user, err := getWebauthnUser(r)
 	if err != nil {
-		log.Printf("failed to get user for DeleteCredential: %s", err)
+		slog.Error(failedToGetUser, "handler", deleteCredential, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
@@ -178,14 +192,14 @@ func (a *App) DeleteCredential(w http.ResponseWriter, r *http.Request) {
 	credID := r.PathValue(IDParam)
 	if credID == "" {
 		err := fmt.Errorf("%s path parameter not provided to DeleteCredential, path: %s", IDParam, r.URL.Path)
-		log.Printf("%s", err)
+		slog.Error("invalid request", "handler", deleteCredential, "error", err)
 		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
 
 	status, err := user.DeleteCredential(credID)
 	if err != nil {
-		log.Printf("error deleting user credential (%d): %s", status, err)
+		slog.Error("error deleting user credential", "status", status, "error", err)
 	}
 
 	switch status {
@@ -196,7 +210,7 @@ func (a *App) DeleteCredential(w http.ResponseWriter, r *http.Request) {
 	case http.StatusInternalServerError:
 		jsonResponse(w, internalServerError, status)
 	default:
-		log.Printf("unexpected status code (%d)", status)
+		slog.Error("unexpected status code", "status", status)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 	}
 }
@@ -225,7 +239,7 @@ func getWebAuthnFromApiMeta(meta WebauthnMeta) (*webauthn.WebAuthn, error) {
 		Debug:         true,
 	})
 	if err != nil {
-		log.Printf("failed to get new webauthn: %s", err)
+		slog.Error("failed to get new webauthn", "error", err)
 	}
 
 	return web, nil
@@ -280,7 +294,7 @@ func getWebauthnUser(r *http.Request) (WebauthnUser, error) {
 func authWebauthnUser(r *http.Request, storage *Storage, apiKey ApiKey) (User, error) {
 	apiMeta, err := getWebauthnMetaFromRequest(r)
 	if err != nil {
-		log.Printf("unable to retrieve API meta information from request: %s", err)
+		slog.Error("unable to retrieve API meta information from request", "error", err)
 		return nil, fmt.Errorf("unable to retrieve API meta information from request: %w", err)
 	}
 
@@ -293,7 +307,7 @@ func authWebauthnUser(r *http.Request, storage *Storage, apiKey ApiKey) (User, e
 
 	// If this user exists (api key value is not empty), make sure the calling API Key owns the user and is allowed to operate on it
 	if user.ApiKeyValue != "" && user.ApiKeyValue != apiKey.Key {
-		log.Printf("api key %s tried to access user %s but that user does not belong to that api key", apiKey.Key, user.ID)
+		slog.Error("api key tried to access user that does not belong to that api key", "apiKey", apiKey.Key, "userID", user.ID)
 		return nil, fmt.Errorf("user does not exist")
 	}
 

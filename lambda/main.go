@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -22,21 +22,23 @@ import (
 var envConfig mfa.EnvConfig
 
 func init() {
-	log.SetOutput(os.Stdout)
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
 
 	err := envconfig.Process("", &envConfig)
 	if err != nil {
-		log.Fatalf("error loading env vars: %s", err)
+		slog.Error("error loading env vars", "error", err)
+		os.Exit(1)
 	}
 	envConfig.InitAWS()
 }
 
 func main() {
-	log.SetOutput(os.Stdout)
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
 
 	err := envconfig.Process("", &envConfig)
 	if err != nil {
-		log.Fatalf("error loading env vars: %s", err)
+		slog.Error("error loading env vars", "error", err)
+		os.Exit(1)
 	}
 	envConfig.InitAWS()
 	mfa.SetConfig(envConfig)
@@ -105,6 +107,6 @@ func sentryInit() {
 		EnableLogs:  true,
 		Environment: envConfig.Environment,
 	}); err != nil {
-		log.Printf("Sentry initialization failed: %v\n", err)
+		slog.Error("Sentry initialization failed", "error", err)
 	}
 }

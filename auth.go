@@ -2,7 +2,7 @@ package mfa
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 )
@@ -29,7 +29,7 @@ func AuthenticateRequest(r *http.Request) (User, error) {
 		return nil, fmt.Errorf("x-mfa-apikey and x-mfa-apisecret are required")
 	}
 
-	log.Printf("API called by key: %s. %s %s", key, r.Method, r.RequestURI)
+	slog.Info("API called", "key", key, "method", r.Method, "uri", r.RequestURI)
 
 	localStorage, err := NewStorage(envConfig.AWSConfig)
 	if err != nil {

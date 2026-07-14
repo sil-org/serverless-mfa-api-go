@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -360,6 +360,7 @@ func (k *ApiKey) ReEncryptLegacy(oldKey ApiKey, v *string) error {
 // ActivateApiKey is the handler for the POST /api-key/activate endpoint. It creates the key secret and updates the
 // database record.
 func (a *App) ActivateApiKey(w http.ResponseWriter, r *http.Request) {
+	const activateApiKey = "ActivateApiKey"
 	ctx := r.Context()
 
 	var requestBody struct {
@@ -369,7 +370,7 @@ func (a *App) ActivateApiKey(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		log.Printf("invalid request in ActivateApiKey: %s", err)
+		slog.Error("invalid request", "handler", activateApiKey, "error", err)
 		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
@@ -390,7 +391,7 @@ func (a *App) ActivateApiKey(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "does not exist") {
 			jsonResponse(w, apiKeyNotFound, http.StatusNotFound)
 		} else {
-			log.Printf("error loading API Key: %s", err)
+			slog.Error("error loading API Key", "handler", activateApiKey, "error", err)
 			jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		}
 		return
@@ -401,7 +402,7 @@ func (a *App) ActivateApiKey(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, ErrKeyAlreadyActivated) {
 			jsonResponse(w, err, http.StatusBadRequest)
 		} else {
-			log.Printf("failed to activate key: %s", err)
+			slog.Error("failed to activate key", "handler", activateApiKey, "error", err)
 			jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		}
 		return
@@ -409,7 +410,7 @@ func (a *App) ActivateApiKey(w http.ResponseWriter, r *http.Request) {
 
 	err = newKey.Save(ctx)
 	if err != nil {
-		log.Printf("failed to save key: %s", err)
+		slog.Error("failed to save key", "handler", activateApiKey, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
@@ -426,6 +427,7 @@ func (a *App) ActivateApiKey(w http.ResponseWriter, r *http.Request) {
 
 // CreateApiKey is the handler for the POST /api-key endpoint. It creates a new API Key and saves it to the database.
 func (a *App) CreateApiKey(w http.ResponseWriter, r *http.Request) {
+	const createApiKey = "CreateApiKey"
 	ctx := r.Context()
 
 	var requestBody struct {
@@ -434,7 +436,7 @@ func (a *App) CreateApiKey(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		log.Printf("invalid request in CreateApiKey: %s", err)
+		slog.Error("invalid request", "handler", createApiKey, "error", err)
 		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
@@ -446,7 +448,7 @@ func (a *App) CreateApiKey(w http.ResponseWriter, r *http.Request) {
 
 	key, err := NewApiKey(requestBody.Email)
 	if err != nil {
-		log.Printf("failed to create a random key: %s", err)
+		slog.Error("failed to create a random key", "handler", createApiKey, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
@@ -454,7 +456,7 @@ func (a *App) CreateApiKey(w http.ResponseWriter, r *http.Request) {
 	key.Store = a.db
 	err = key.Save(ctx)
 	if err != nil {
-		log.Printf("failed to save key: %s", err)
+		slog.Error("failed to save key", "handler", createApiKey, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
@@ -472,11 +474,12 @@ func (a *App) CreateApiKey(w http.ResponseWriter, r *http.Request) {
 // any number of times to continue the process. A status of 200 does not indicate that all keys were encrypted using the
 // new key. Check the response data to determine if the rotation process is complete.
 func (a *App) RotateApiKey(w http.ResponseWriter, r *http.Request) {
+	const rotateApiKey = "RotateApiKey"
 	ctx := r.Context()
 	var requestBody map[string]string
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		log.Printf("invalid request in ActivateApiKey: %s", err)
+		slog.Error("invalid request", "handler", rotateApiKey, "error", err)
 		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
@@ -493,7 +496,7 @@ func (a *App) RotateApiKey(w http.ResponseWriter, r *http.Request) {
 
 	oldKey, err := getAPIKey(r)
 	if err != nil {
-		log.Printf("Rotate API key error: %v", err)
+		slog.Error(apiKeyError, "handler", rotateApiKey, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
@@ -501,19 +504,19 @@ func (a *App) RotateApiKey(w http.ResponseWriter, r *http.Request) {
 	newKey := ApiKey{Key: requestBody[paramNewKeyId], Store: a.GetDB()}
 	err = newKey.loadAndCheck(requestBody[paramNewKeySecret])
 	if err != nil {
-		log.Printf("new key is not valid: %s", err)
+		slog.Error("new key is not valid", "handler", rotateApiKey, "error", err)
 		jsonResponse(w, apiKeyNotFound, http.StatusNotFound)
 		return
 	}
 
 	webauthnStats, err := newKey.ReEncryptWebAuthnUsers(ctx, a.GetDB(), oldKey)
 	if err != nil {
-		log.Printf("failed to re-encrypt one or more WebAuthn record: %s", err)
+		slog.Error("failed to re-encrypt one or more WebAuthn record", "handler", rotateApiKey, "error", err)
 	}
 
 	totpStats, err := newKey.ReEncryptTOTPs(ctx, a.GetDB(), oldKey)
 	if err != nil {
-		log.Printf("failed to re-encrypt one or more TOTP record: %s", err)
+		slog.Error("failed to re-encrypt one or more TOTP record", "handler", rotateApiKey, "error", err)
 	}
 
 	responseBody := BatchStats{
