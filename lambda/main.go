@@ -22,7 +22,7 @@ import (
 var envConfig mfa.EnvConfig
 
 func init() {
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
 	err := envconfig.Process("", &envConfig)
 	if err != nil {
@@ -33,7 +33,7 @@ func init() {
 }
 
 func main() {
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
 	err := envconfig.Process("", &envConfig)
 	if err != nil {
