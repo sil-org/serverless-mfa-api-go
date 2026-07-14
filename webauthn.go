@@ -142,7 +142,7 @@ func (a *App) FinishLogin(w http.ResponseWriter, r *http.Request) {
 		// SonarQube flagged this as vulnerable to injection attacks. Rather than exhaustively search for places
 		// where user input is inserted into the error message, I'll just sanitize it as recommended.
 		sanitizedError := strings.ReplaceAll(strings.ReplaceAll(err.Error(), "\n", "_"), "\r", "_")
-		slog.Error("failed finishing user login", "handler", finishLogin, "error", sanitizedError)
+		slog.Error("failed to finish user login", "handler", finishLogin, "error", sanitizedError)
 
 		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
