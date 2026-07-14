@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -14,20 +14,22 @@ import (
 var envConfig mfa.EnvConfig
 
 func main() {
-	log.SetOutput(os.Stdout)
-	log.Println("Server starting...")
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	slog.Info("Server starting...")
 
 	err := envconfig.Process("", &envConfig)
 	if err != nil {
-		log.Fatalf("error loading env vars: %s", err)
+		mfa.Fatal("error loading env vars", err)
 	}
 	envConfig.InitAWS()
 	mfa.SetConfig(envConfig)
 
 	// ListenAndServe starts an HTTP server with a given address and
 	// handler defined in NewRouter.
-	log.Println("Starting service on port 8080")
+	slog.Info("Starting service on port 8080")
 	app := mfa.NewApp(envConfig)
 	mux := router.NewMux(app)
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	if err := http.ListenAndServe(":8080", mux); err != nil {
+		mfa.Fatal("server stopped", err)
+	}
 }

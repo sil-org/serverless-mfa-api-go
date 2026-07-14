@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"image/png"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -19,6 +19,7 @@ import (
 const TOTPTablePK = "uuid"
 
 const (
+	apiKeyError         = "API key error"
 	internalServerError = "Internal server error"
 	invalidRequest      = "Invalid request"
 	totpNotFound        = "TOTP not found"
@@ -75,23 +76,25 @@ type ValidateTOTPRequestBody struct {
 
 // CreateTOTP is the http handler to create a new TOTP.
 func (a *App) CreateTOTP(w http.ResponseWriter, r *http.Request) {
+	const createTOTP = "CreateTOTP"
+
 	requestBody, err := parseCreateTOTPRequestBody(r.Body)
 	if err != nil {
-		log.Println("Invalid CreateTOTP request body:", err)
+		slog.Error("invalid request body", "handler", createTOTP, "error", err)
 		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
 
 	apiKey, err := getAPIKey(r)
 	if err != nil {
-		log.Printf("CreateTOTP API key error: %v", err)
+		slog.Error(apiKeyError, "handler", createTOTP, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
 
 	t, err := newTOTP(a.db, apiKey, requestBody.Issuer, requestBody.Name)
 	if err != nil {
-		log.Printf("failed to create a new TOTP: %s", err)
+		slog.Error("failed to create a new TOTP", "handler", createTOTP, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
@@ -177,11 +180,13 @@ func newTOTP(db *Storage, apiKey ApiKey, issuer, name string) (TOTP, error) {
 
 // DeleteTOTP is the http handler to delete a TOTP.
 func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
+	const deleteTOTP = "DeleteTOTP"
+
 	id := r.PathValue(UUIDParam)
 
 	key, err := getAPIKey(r)
 	if err != nil {
-		log.Printf("DeleteTOTP API key error: %v", err)
+		slog.Error(apiKeyError, "handler", deleteTOTP, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
@@ -192,7 +197,7 @@ func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "does not exist") {
 			jsonResponse(w, totpNotFound, http.StatusNotFound)
 		} else {
-			log.Printf("error loading TOTP: %s", err)
+			slog.Error("error loading TOTP", "handler", deleteTOTP, "error", err)
 			jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		}
 		return
@@ -205,7 +210,7 @@ func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 
 	err = a.db.Delete(envConfig.TotpTable, TOTPTablePK, id)
 	if err != nil {
-		log.Printf("Failed to delete TOTP: %s", err)
+		slog.Error("failed to delete TOTP", "handler", deleteTOTP, "error", err)
 		jsonResponse(w, "Failed to delete TOTP", http.StatusInternalServerError)
 		return
 	}
@@ -215,9 +220,11 @@ func (a *App) DeleteTOTP(w http.ResponseWriter, r *http.Request) {
 
 // ValidateTOTP is the http handler to validate a TOTP.
 func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
+	const validateTOTP = "ValidateTOTP"
+
 	requestBody, err := parseValidateTOTPRequestBody(r.Body)
 	if err != nil {
-		log.Printf("Invalid ValidateTOTP request body: %s", err)
+		slog.Error("invalid request body", "handler", validateTOTP, "error", err)
 		jsonResponse(w, invalidRequest, http.StatusBadRequest)
 		return
 	}
@@ -226,7 +233,7 @@ func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 
 	key, err := getAPIKey(r)
 	if err != nil {
-		log.Printf("ValidateTOTP API key error: %v", err)
+		slog.Error(apiKeyError, "handler", validateTOTP, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}
@@ -237,7 +244,7 @@ func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "does not exist") {
 			jsonResponse(w, totpNotFound, http.StatusNotFound)
 		} else {
-			log.Printf("error loading TOTP: %s", err)
+			slog.Error("error loading TOTP", "handler", validateTOTP, "error", err)
 			jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		}
 		return
@@ -250,7 +257,7 @@ func (a *App) ValidateTOTP(w http.ResponseWriter, r *http.Request) {
 
 	secret, err := key.DecryptLegacy(t.EncryptedTotpKey)
 	if err != nil {
-		log.Printf("failed to decrypt TOTP key: %s", err)
+		slog.Error("failed to decrypt TOTP key", "handler", validateTOTP, "error", err)
 		jsonResponse(w, internalServerError, http.StatusInternalServerError)
 		return
 	}

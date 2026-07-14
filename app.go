@@ -1,9 +1,5 @@
 package mfa
 
-import (
-	"log"
-)
-
 type App struct {
 	config EnvConfig
 	db     *Storage
@@ -13,7 +9,7 @@ type App struct {
 func NewApp(cfg EnvConfig) *App {
 	db, err := NewStorage(cfg.AWSConfig)
 	if err != nil {
-		log.Fatalf("failed to create storage client: %s", err)
+		Fatal("failed to create storage client", err)
 	}
 
 	return &App{

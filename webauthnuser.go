@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/fxamacker/cbor/v2"
@@ -77,7 +77,7 @@ func NewWebauthnUser(apiConfig WebauthnMeta, storage *Storage, apiKey ApiKey, we
 
 	err := u.Load()
 	if err != nil {
-		log.Printf("failed to load user: %s", err)
+		slog.Error("failed to load user", "error", err)
 	}
 	return u
 }
@@ -107,7 +107,7 @@ func (u *WebauthnUser) saveSessionData(sessionData webauthn.SessionData) error {
 
 	js, err := json.Marshal(sessionData)
 	if err != nil {
-		log.Printf("error marshaling session data to json. Session data: %+v, Error: %s", sessionData, err)
+		slog.Error("error marshaling session data to json", "sessionData", sessionData, "error", err)
 		return err
 	}
 
@@ -229,7 +229,7 @@ func (u *WebauthnUser) Load() error {
 		var sd webauthn.SessionData
 		err = json.Unmarshal(plain, &sd)
 		if err != nil {
-			log.Printf("failed to unmarshal encrypted session data, will discard and continue. error: %s", err)
+			slog.Error("failed to unmarshal encrypted session data, will discard and continue", "error", err)
 		}
 
 		u.SessionData = sd
@@ -354,7 +354,7 @@ func (u *WebauthnUser) BeginLogin() (*protocol.CredentialAssertion, error) {
 
 	err = u.saveSessionData(*sessionData)
 	if err != nil {
-		log.Printf("error saving session data: %s", err)
+		slog.Error("error saving session data", "error", err)
 		return nil, err
 	}
 
@@ -370,7 +370,7 @@ func (u *WebauthnUser) FinishLogin(r *http.Request) (*webauthn.Credential, error
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("failed to read request body: %s", err)
+		slog.Error("failed to read request body", "error", err)
 		return &webauthn.Credential{}, fmt.Errorf("failed to read request body: %w", err)
 	}
 
@@ -430,13 +430,13 @@ func (u *WebauthnUser) WebAuthnCredentials() []webauthn.Credential {
 
 	decodedCredId, err := base64.RawURLEncoding.DecodeString(u.KeyHandle)
 	if err != nil {
-		log.Println("error decoding credential id:", err)
+		slog.Error("error decoding credential id", "error", err)
 		return nil
 	}
 
 	decodedPubKey, err := base64.RawURLEncoding.DecodeString(u.PublicKey)
 	if err != nil {
-		log.Println("error decoding public key:", err)
+		slog.Error("error decoding public key", "error", err)
 		return nil
 	}
 
@@ -458,7 +458,7 @@ func (u *WebauthnUser) WebAuthnCredentials() []webauthn.Credential {
 	// Get the CBOR-encoded representation of the OKPPublicKeyData
 	cborEncodedKey, err := cbor.Marshal(ec2PublicKey)
 	if err != nil {
-		log.Printf("error marshalling key to cbor: %s", err)
+		slog.Error("error marshalling key to cbor", "error", err)
 		return nil
 	}
 
@@ -481,8 +481,8 @@ func hashAndEncodeKeyHandle(id []byte) string {
 func logProtocolError(msg string, err error) {
 	var protocolError *protocol.Error
 	if errors.As(err, &protocolError) {
-		log.Printf("%s, ProtocolError: %s, DevInfo: %s", msg, protocolError.Details, protocolError.DevInfo)
+		slog.Error(msg, "ProtocolError", protocolError.Details, "devInfo", protocolError.DevInfo)
 	} else {
-		log.Printf("%s, Error: %s", msg, err)
+		slog.Error(msg, "error", err)
 	}
 }

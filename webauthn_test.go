@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -759,7 +759,7 @@ func testAuthnMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, err := AuthenticateRequest(r)
 		if err != nil {
-			log.Printf("unable to authenticate request: %s", err)
+			slog.Error("unable to authenticate request", "error", err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
