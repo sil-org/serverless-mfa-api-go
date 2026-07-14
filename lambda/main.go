@@ -22,18 +22,9 @@ import (
 
 var envConfig mfa.EnvConfig
 
-func init() {
+func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
-	err := envconfig.Process("", &envConfig)
-	if err != nil {
-		slog.Error("error loading env vars", "error", err)
-		os.Exit(1)
-	}
-	envConfig.InitAWS()
-}
-
-func main() {
 	err := envconfig.Process("", &envConfig)
 	if err != nil {
 		slog.Error("error loading env vars", "error", err)
