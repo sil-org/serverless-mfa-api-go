@@ -107,6 +107,6 @@ func sentryInit() {
 		EnableLogs:  true,
 		Environment: envConfig.Environment,
 	}); err != nil {
-		slog.Error("Sentry initialization failed", "error", err)
+		slog.Error(fmt.Sprintf("Sentry initialization failed: %v", err))
 	}
 }
