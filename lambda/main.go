@@ -33,8 +33,6 @@ func init() {
 }
 
 func main() {
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
-
 	err := envconfig.Process("", &envConfig)
 	if err != nil {
 		slog.Error("error loading env vars", "error", err)
