@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -50,4 +51,9 @@ func (e *EnvConfig) String() string {
 func SetConfig(c EnvConfig) {
 	envConfig = c
 	slog.Info("config loaded", "config", envConfig.String())
+}
+
+func Fatal(msg string, err error) {
+	slog.Error(msg, "error", err)
+	os.Exit(1)
 }

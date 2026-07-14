@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	mfa "github.com/sil-org/serverless-mfa-api-go"
 	u2fsim "github.com/sil-org/serverless-mfa-api-go/u2fsimulator"
 )
 
@@ -17,8 +18,7 @@ func main() {
 	slog.Info("Starting service on port 8080")
 	router := newRouter()
 	if err := http.ListenAndServe(":8080", router); err != nil {
-		slog.Error("server stopped", "error", err)
-		os.Exit(1)
+		mfa.Fatal("server stopped", err)
 	}
 }
 

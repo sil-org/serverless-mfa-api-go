@@ -19,8 +19,7 @@ func main() {
 
 	err := envconfig.Process("", &envConfig)
 	if err != nil {
-		slog.Error("error loading env vars", "error", err)
-		os.Exit(1)
+		mfa.Fatal("error loading env vars", err)
 	}
 	envConfig.InitAWS()
 	mfa.SetConfig(envConfig)
@@ -31,7 +30,6 @@ func main() {
 	app := mfa.NewApp(envConfig)
 	mux := router.NewMux(app)
 	if err := http.ListenAndServe(":8080", mux); err != nil {
-		slog.Error("server stopped", "error", err)
-		os.Exit(1)
+		mfa.Fatal("server stopped", err)
 	}
 }

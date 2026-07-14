@@ -27,8 +27,7 @@ func main() {
 
 	err := envconfig.Process("", &envConfig)
 	if err != nil {
-		slog.Error("error loading env vars", "error", err)
-		os.Exit(1)
+		mfa.Fatal("error loading env vars", err)
 	}
 	envConfig.InitAWS()
 	mfa.SetConfig(envConfig)
