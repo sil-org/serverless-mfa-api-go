@@ -2,8 +2,6 @@ package mfa
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"os"
 
@@ -40,17 +38,16 @@ func (e *EnvConfig) InitAWS() {
 	e.AWSConfig = cfg
 }
 
-func (e *EnvConfig) String() string {
-	b, err := json.Marshal(e)
-	if err != nil {
-		return fmt.Sprintf("error stringifying envConfig: %s", err)
-	}
-	return string(b)
-}
-
 func SetConfig(c EnvConfig) {
 	envConfig = c
-	slog.Info("config loaded", "config", envConfig.String())
+	slog.Info("config loaded",
+		"api_key_table", envConfig.ApiKeyTable,
+		"environment", envConfig.Environment,
+		"aws_default_region", envConfig.AwsDefaultRegion,
+		"aws_endpoint", envConfig.AwsEndpoint,
+		"totp_table", envConfig.TotpTable,
+		"webauthn_table", envConfig.WebauthnTable,
+	)
 }
 
 func Fatal(msg string, err error) {
