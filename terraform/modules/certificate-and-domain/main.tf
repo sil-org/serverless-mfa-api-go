@@ -32,8 +32,8 @@ resource "aws_acm_certificate" "this" {
 resource "cloudflare_dns_record" "validation" {
   count = var.create_dns_validation ? 1 : 0
 
-  name    = tolist(aws_acm_certificate.this.domain_validation_options)[0].resource_record_name
-  content = tolist(aws_acm_certificate.this.domain_validation_options)[0].resource_record_value
+  name    = trimsuffix(tolist(aws_acm_certificate.this.domain_validation_options)[0].resource_record_name, ".")
+  content = trimsuffix(tolist(aws_acm_certificate.this.domain_validation_options)[0].resource_record_value, ".")
   type    = tolist(aws_acm_certificate.this.domain_validation_options)[0].resource_record_type
   zone_id = data.cloudflare_zone.this.id
   proxied = false
