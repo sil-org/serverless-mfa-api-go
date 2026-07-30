@@ -28,7 +28,7 @@ func NewCdkStack(scope constructs.Construct, id string, props *CdkStackProps) aw
 	apiKeyTable := getEnv("API_KEY_TABLE", "api-key")
 	totpTable := getEnv("TOTP_TABLE", "totp")
 	webauthnTable := getEnv("WEBAUTHN_TABLE", "webauthn")
-	lambdaRoleArn := getEnv("LAMBDA_ROLE", "")
+	lambdaRoleArn := getRequiredEnv("LAMBDA_ROLE")
 
 	functionName := id
 
@@ -60,12 +60,7 @@ func NewCdkStack(scope constructs.Construct, id string, props *CdkStackProps) aw
 		Timeout:       awscdk.Duration_Seconds(jsii.Number(5)),
 	}
 
-	if lambdaRoleArn != "" {
-		functionProps.Role = awsiam.Role_FromRoleArn(stack, jsii.String("Role"), jsii.String(lambdaRoleArn), nil)
-	} else {
-		functionProps.Role = awsiam.Role_FromRoleName(stack, jsii.String("Role"),
-			jsii.String("service-role/AWSLambdaBasicExecutionRole"), nil)
-	}
+	functionProps.Role = awsiam.Role_FromRoleArn(stack, jsii.String("Role"), jsii.String(lambdaRoleArn), nil)
 
 	function := awslambda.NewFunction(stack, jsii.String("Function"), functionProps)
 
@@ -123,4 +118,12 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func getRequiredEnv(key string) string {
+	value, ok := os.LookupEnv(key)
+	if !ok || value == "" {
+		panic("required environment variable is missing or empty: " + key)
+	}
+	return value
 }
