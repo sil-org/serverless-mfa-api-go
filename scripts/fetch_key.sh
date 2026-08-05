@@ -33,14 +33,12 @@ if [[ -z "$PROFILE" || -z "$TABLE" || -z "$KEY_ID" ]]; then
 fi
 
 echo "Extracting data from $TABLE..." >&2
-if ! result=$(aws dynamodb scan \
+if ! result=$(aws dynamodb get-item \
   --profile "$PROFILE" \
   --table-name "$TABLE" \
-  --filter-expression "#key = :v" \
-  --expression-attribute-names '{"#key":"value"}' \
-  --expression-attribute-values "{\":v\":{\"S\":\"$KEY_ID\"}}" \
-  | jq '.Items[0]'); then
-    echo "AWS DynamoDB scan failed" >&2
+  --key "{\"value\": {\"S\": \"$KEY_ID\"}}" \
+  | jq '.Item'); then
+    echo "AWS DynamoDB get-item failed"
     exit 1
 fi
 
