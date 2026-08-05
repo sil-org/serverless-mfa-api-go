@@ -23,3 +23,5 @@ local_data.sh
 .terraform/
 main_override.tf
 remote-tfc.tf
+
+*.json
