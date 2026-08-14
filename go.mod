@@ -1,6 +1,6 @@
 module github.com/sil-org/serverless-mfa-api-go
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/aws/aws-lambda-go v1.49.0
