@@ -9,7 +9,7 @@ RUN curl -sSfL --proto "=https" https://raw.githubusercontent.com/cosmtrek/air/m
   git config --global --add safe.directory /src
 
 COPY ./ .
-RUN go get ./... && \
+RUN go mod download && \
   git config --global --add safe.directory /src
 
 EXPOSE 8080
