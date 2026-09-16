@@ -10,10 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/fxamacker/cbor/v2"
-
 	"github.com/go-webauthn/webauthn/protocol"
-	"github.com/go-webauthn/webauthn/protocol/webauthncose"
 	"github.com/go-webauthn/webauthn/webauthn"
 )
 
@@ -403,52 +400,9 @@ func (u *WebauthnUser) WebAuthnIcon() string {
 	return u.Icon
 }
 
-// WebAuthnCredentials returns an array of credentials (passkeys) plus a U2F credential if present
+// WebAuthnCredentials returns an array of credentials (passkeys)
 func (u *WebauthnUser) WebAuthnCredentials() []webauthn.Credential {
-	if u.EncryptedKeyHandle == "" || u.EncryptedPublicKey == "" {
-		// no U2F credential found
-		return u.Credentials
-	}
-
-	decodedCredId, err := base64.RawURLEncoding.DecodeString(u.KeyHandle)
-	if err != nil {
-		slog.Error("error decoding credential id", "error", err)
-		return nil
-	}
-
-	decodedPubKey, err := base64.RawURLEncoding.DecodeString(u.PublicKey)
-	if err != nil {
-		slog.Error("error decoding public key", "error", err)
-		return nil
-	}
-
-	// U2F key is concatenation of 0x4 + Xcoord + Ycoord
-	// documentation / example at https://docs.yubico.com/yesdk/users-manual/application-piv/attestation.html
-	coordLen := (len(decodedPubKey) - 1) / 2
-	xCoord := decodedPubKey[1 : coordLen+1]
-	yCoord := decodedPubKey[1+coordLen:]
-
-	ec2PublicKey := webauthncose.EC2PublicKeyData{
-		XCoord: xCoord,
-		YCoord: yCoord,
-		PublicKeyData: webauthncose.PublicKeyData{
-			Algorithm: int64(webauthncose.AlgES256),
-			KeyType:   int64(webauthncose.EllipticKey),
-		},
-	}
-
-	// Get the CBOR-encoded representation of the OKPPublicKeyData
-	cborEncodedKey, err := cbor.Marshal(ec2PublicKey)
-	if err != nil {
-		slog.Error("error marshalling key to cbor", "error", err)
-		return nil
-	}
-
-	return append(u.Credentials, webauthn.Credential{
-		ID:              decodedCredId,
-		PublicKey:       cborEncodedKey,
-		AttestationType: string(protocol.PublicKeyCredentialType),
-	})
+	return u.Credentials
 }
 
 // hashAndEncodeKeyHandle returns the Base64 URL-encoded SHA256 hash of a byte slice to provide a hash of a key
