@@ -251,24 +251,6 @@ func (u *WebauthnUser) Load() error {
 		u.Credentials = creds
 	}
 
-	appid, err := u.ApiKey.DecryptLegacy(u.EncryptedAppId)
-	if err != nil {
-		return fmt.Errorf("failed to decrypt app id: %w", err)
-	}
-	u.AppId = appid
-
-	publicKey, err := u.ApiKey.DecryptLegacy(u.EncryptedPublicKey)
-	if err != nil {
-		return fmt.Errorf("failed to decrypt public key: %w", err)
-	}
-	u.PublicKey = publicKey
-
-	keyHandle, err := u.ApiKey.DecryptLegacy(u.EncryptedKeyHandle)
-	if err != nil {
-		return fmt.Errorf("failed to decrypt key handle: %w", err)
-	}
-	u.KeyHandle = keyHandle
-
 	return nil
 }
 
