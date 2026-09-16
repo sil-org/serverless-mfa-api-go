@@ -41,7 +41,7 @@ Every request (except `GET /status`) must carry `x-mfa-apikey` / `x-mfa-apisecre
 
 ### Storage
 
-`storage.go`'s `Storage` type wraps a raw `dynamodb.Client` with generic `Store`/`Load`/`Delete`/`ScanAll`/`ScanApiKey` methods operating on struct tags (`dynamodbav`) via `attributevalue`. There are three tables, one per concern (`ApiKeyTable`, `TotpTable`, `WebauthnTable`), named via env vars in `EnvConfig` (`config.go`). Scans auto-paginate via `LastEvaluatedKey`. There is no ORM/model layer beyond this — domain types (`ApiKey`, `TOTP`, `WebauthnUser`) call `Storage` methods directly on themselves (e.g. `ApiKey.Load()`/`Save()`).
+`storage.go`'s `Storage` type wraps a raw `dynamodb.Client` with `Store`/`Load`/`Delete`/`ScanApiKey` methods operating on struct tags (`dynamodbav`) via `attributevalue`. `ScanApiKey` currently returns an error when DynamoDB provides a `LastEvaluatedKey`; it does not auto-paginate. There are three tables, one per concern (`ApiKeyTable`, `TotpTable`, `WebauthnTable`), named via env vars in `EnvConfig` (`config.go`).
 
 ### WebAuthn user model
 
