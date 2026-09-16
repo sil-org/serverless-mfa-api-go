@@ -14,7 +14,7 @@ The full HTTP API is documented in `openapi.yaml` and summarized in `README.md`.
 ## Commands
 
 ```bash
-make test           # tears down/rebuilds Docker Compose env, runs `go test ./...` in the app container
+make test           # kills and restarts Docker Compose containers, runs `go test ./...` in the app container
 make demo           # starts proxy+ui+app+dbinit, for manual testing through the demo-ui over HTTPS via Traefik
 make db             # start just the local DynamoDB container
 make dbinit         # start DynamoDB + create the WebAuthn/Totp/ApiKey tables + seed a test API key
@@ -49,8 +49,8 @@ Every request (except `GET /status`) must carry `x-mfa-apikey` / `x-mfa-apisecre
 
 ### Testing conventions
 
-Tests use `testify/suite`; `MfaSuite` (`suite_test.go`) resets the local DynamoDB tables before each test via `initDb`. `fixtures_test.go` provides shared fixture builders (`getDBConfig`, `getTestWebauthnUsers`) for seeding multiple API keys and WebAuthn users with credentials in one call. Tests require the Docker Compose DynamoDB instance running on `localhost:8010` — there is no mocking of DynamoDB.
+Tests use `testify/suite`; `MfaSuite` (`suite_test.go`) resets the local DynamoDB tables before each test via `initDb`. `fixtures_test.go` provides shared fixture builders (`getDBConfig`, `getTestWebauthnUsers`) for seeding multiple API keys and WebAuthn users with credentials in one call. Tests require the Docker Compose DynamoDB instance running on `localhost:8000` — there is no mocking of DynamoDB.
 
 ### CI/CD
 
-`.github/workflows/test-deploy-publish.yml`: `tests` (docker compose `go test ./...`) and `lint` (`golangci-lint` + `govulncheck`) run on every push; on `main` or a version tag, `deploy` builds the Lambda binary and runs `cdk deploy` per AWS region (`us-east-1`, `us-west-2`), and `build-and-publish` builds/pushes a Docker image to `ghcr.io`. The `cdk/` directory is its own Go module (separate `go.mod`) and is excluded from triggering CI via `paths-ignore` only for `terraform/**`, not for `cdk/`.
+`.github/workflows/test-deploy-publish.yml`: `tests` (docker compose `go test ./...`) and `lint` (`golangci-lint` + `govulncheck`) run on every push (except Terraform-only changes); on `main` or a version tag, `deploy` builds the Lambda binary and runs `cdk deploy` per AWS region (`us-east-1`, `us-west-2`), and `build-and-publish` builds/pushes a Docker image to `ghcr.io`. The `cdk/` directory is its own Go module (separate `go.mod`) and is excluded from triggering CI via `paths-ignore` only for `terraform/**`, not for `cdk/`.
