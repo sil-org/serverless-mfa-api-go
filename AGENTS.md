@@ -21,7 +21,7 @@ make dbinit         # start DynamoDB + create the WebAuthn/Totp/ApiKey tables + 
 make clean          # kill and remove all compose containers
 ```
 
-To run a single test or use your IDE's test runner, DynamoDB and the tables must already exist locally — run `make dbinit` first, then run tests directly against `localhost:8010` (see `fixtures_test.go` / `suite_test.go` for how tests get their AWS/env config). CI runs tests via `docker compose run app go test ./...`.
+To run a single test or use your IDE's test runner, start DynamoDB and the tables with `make dbinit`, then run tests with `AWS_ENDPOINT=http://localhost:8000 AWS_DEFAULT_REGION=localhost AWS_ACCESS_KEY_ID=abc123 AWS_SECRET_ACCESS_KEY=abc123 go test ./...` (see `fixtures_test.go` / `suite_test.go` for how tests get their AWS/env config). CI runs tests via `docker compose run app go test ./...`.
 
 Local HTTP API is available on `localhost:8161` once `make demo` (or `app`+`db`) is running. `make dbinit` seeds an API key/secret pair documented in the Makefile and README (`createapikeytable` target) for manual testing.
 
