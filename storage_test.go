@@ -83,14 +83,14 @@ func (ms *MfaSuite) TestStorageScanApiKey() {
 	s, err := NewStorage(cfg)
 	ms.NoError(err)
 	must(s.Store(TestTableName, &WebauthnUser{
-		ID:             "user1",
-		ApiKeyValue:    "key1",
-		EncryptedAppId: "xyz123",
+		ID:                   "user1",
+		ApiKeyValue:          "key1",
+		EncryptedSessionData: []byte("xyz123"),
 	}))
 	must(s.Store(TestTableName, &WebauthnUser{
-		ID:             "user2",
-		ApiKeyValue:    "key2",
-		EncryptedAppId: "abc123",
+		ID:                   "user2",
+		ApiKeyValue:          "key2",
+		EncryptedSessionData: []byte("abc123"),
 	}))
 
 	var users []WebauthnUser
@@ -99,5 +99,5 @@ func (ms *MfaSuite) TestStorageScanApiKey() {
 	ms.Len(users, 1)
 	ms.Equal("user1", users[0].ID)
 	ms.Equal("key1", users[0].ApiKeyValue)
-	ms.Equal("xyz123", users[0].EncryptedAppId)
+	ms.Equal([]byte("xyz123"), users[0].EncryptedSessionData)
 }

@@ -42,17 +42,6 @@ func (ms *MfaSuite) Test_User_DeleteCredential() {
 			},
 		},
 		{
-			name:       "legacy u2f credential",
-			user:       testUser0,
-			credID:     LegacyU2FCredID,
-			wantStatus: http.StatusNoContent,
-			verifyFn: func(results *dynamodb.ScanOutput) {
-				for i := range results.Items {
-					ms.Equal("", results.Items[i]["encryptedAppId"].(*types.AttributeValueMemberS).Value)
-				}
-			},
-		},
-		{
 			name:            "one credential but bad credential ID",
 			user:            testUser1,
 			credID:          "badCredID",

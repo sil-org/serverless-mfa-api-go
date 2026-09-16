@@ -37,7 +37,7 @@ The root package `mfa` (module `github.com/sil-org/serverless-mfa-api-go`) holds
 
 ### Authentication and per-tenant encryption
 
-Every request (except `GET /status`) must carry `x-mfa-apikey` / `x-mfa-apisecret` headers. `AuthenticateRequest` (`auth.go`) loads the matching `ApiKey` from DynamoDB, verifies the secret against `HashedSecret` (bcrypt), then dispatches based on the first URL path segment (`webauthn` → loads/creates a `WebauthnUser`, `totp` → returns the `ApiKey` itself, `api-key` → returns the `ApiKey`). The API secret is also used to derive an AES key (see `apikey.go`'s `EncryptData`/`DecryptData`, and the legacy `EncryptLegacy`/`DecryptLegacy` pair used for old U2F fields) — all TOTP secrets and WebAuthn credential blobs are encrypted at rest with the caller's own secret, never a service-wide key. `ApiKey.ReEncrypt*` methods support key rotation (`POST /api-key/rotate`, marked experimental) by decrypting under the old key and re-encrypting under the new one across both the TOTP and WebAuthn tables.
+Every request (except `GET /status`) must carry `x-mfa-apikey` / `x-mfa-apisecret` headers. `AuthenticateRequest` (`auth.go`) loads the matching `ApiKey` from DynamoDB, verifies the secret against `HashedSecret` (bcrypt), then dispatches based on the first URL path segment (`webauthn` → loads/creates a `WebauthnUser`, `totp` → returns the `ApiKey` itself, `api-key` → returns the `ApiKey`). The API secret is also used to derive an AES key (see `apikey.go`'s `EncryptData`/`DecryptData`, and the legacy `EncryptLegacy`/`DecryptLegacy` pair used for TOTP secrets) — all TOTP secrets and WebAuthn credential blobs are encrypted at rest with the caller's own secret, never a service-wide key. `ApiKey.ReEncrypt*` methods support key rotation (`POST /api-key/rotate`, marked experimental) by decrypting under the old key and re-encrypting under the new one across both the TOTP and WebAuthn tables.
 
 ### Storage
 
@@ -45,7 +45,7 @@ Every request (except `GET /status`) must carry `x-mfa-apikey` / `x-mfa-apisecre
 
 ### WebAuthn user model
 
-`WebauthnUser` (`webauthnuser.go`) stores both legacy U2F fields (`EncryptedAppId`/`EncryptedKeyHandle`/`EncryptedPublicKey`, decrypted with `DecryptLegacy`) and modern WebAuthn fields (`EncryptedCredentials`, `EncryptedSessionData`, decrypted with `DecryptData`) on the same record, keyed by the caller-supplied `x-mfa-UserUUID`. A special credential ID (`LegacyU2FCredID = "u2f"`) marks the at-most-one synthesized credential representing old U2F registrations, letting old and new auth methods coexist per user. `WebauthnMeta` (in `webauthn.go`) carries per-request Relying Party info (RPID/RPOrigin/RPDisplayName) from headers rather than from `EnvConfig`, since this API is intentionally shared across multiple consuming applications/domains.
+`WebauthnUser` (`webauthnuser.go`) stores WebAuthn fields (`EncryptedCredentials`, `EncryptedSessionData`, decrypted with `DecryptData`), keyed by the caller-supplied `x-mfa-UserUUID`. `WebauthnMeta` (in `webauthn.go`) carries per-request Relying Party info (RPID/RPOrigin/RPDisplayName) from headers rather than from `EnvConfig`, since this API is intentionally shared across multiple consuming applications/domains.
 
 ### Testing conventions
 
