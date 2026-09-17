@@ -683,8 +683,7 @@ paths:
           required: true
           description: >-
             The unique identifier for the credential. It is the `key_handle_hash` value returned by the 
-            Finish Registration endpoint. If the id is the fixed string "u2f" the legacy U2F data is removed from the
-            record.
+            Finish Registration endpoint.
       responses:
         204:
           description: Success

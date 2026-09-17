@@ -147,8 +147,8 @@ func (k *ApiKey) DecryptData(ciphertext []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-// EncryptLegacy uses the Secret to AES encrypt an arbitrary data block. This is intended only for legacy data such
-// as U2F keys. The returned data is the Base64-encoded IV and the Base64-encoded cipher text separated by a colon.
+// EncryptLegacy uses the Secret to AES encrypt an arbitrary data block. This is intended only for TOTP keys.
+// The returned data is the Base64-encoded IV and the Base64-encoded cipher text separated by a colon.
 func (k *ApiKey) EncryptLegacy(plaintext string) (string, error) {
 	block, err := newCipherBlock(k.Secret)
 	if err != nil {
@@ -169,8 +169,7 @@ func (k *ApiKey) EncryptLegacy(plaintext string) (string, error) {
 	return ivBase64 + ":" + cipherBase64, nil
 }
 
-// DecryptLegacy uses the Secret to AES decrypt an arbitrary data block. This is intended only for legacy data such
-// as U2F keys.
+// DecryptLegacy uses the Secret to AES decrypt an arbitrary data block. This is intended only for TOTP keys.
 func (k *ApiKey) DecryptLegacy(ciphertext string) (string, error) {
 	if ciphertext == "" {
 		return "", nil
@@ -297,13 +296,6 @@ func (k *ApiKey) ReEncryptWebAuthnUser(ctx context.Context, storage *Storage, us
 	err = k.ReEncrypt(oldKey, &user.EncryptedCredentials)
 	if err != nil {
 		return err
-	}
-
-	for _, p := range []*string{&user.EncryptedPublicKey, &user.EncryptedKeyHandle, &user.EncryptedAppId} {
-		err = k.ReEncryptLegacy(oldKey, p)
-		if err != nil {
-			return err
-		}
 	}
 
 	user.ApiKey = *k

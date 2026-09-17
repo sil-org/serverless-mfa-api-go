@@ -587,12 +587,16 @@ func (ms *MfaSuite) TestReEncryptWebAuthnUser() {
 		user WebauthnUser
 	}{
 		{
-			name: "rotate U2F user",
+			name: "rotate user with no credentials",
 			user: users[0],
 		},
 		{
-			name: "rotate WebAuthn user",
+			name: "rotate user with one WebAuthn credential",
 			user: users[1],
+		},
+		{
+			name: "rotate user with two WebAuthn credentials",
+			user: users[2],
 		},
 	}
 	for _, tt := range tests {

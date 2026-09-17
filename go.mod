@@ -8,7 +8,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.29.16
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.19.2
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.43.3
-	github.com/fxamacker/cbor/v2 v2.8.0
 	github.com/getsentry/sentry-go v0.35.3
 	github.com/go-webauthn/webauthn v0.11.2
 	github.com/google/uuid v1.6.0
@@ -34,6 +33,7 @@ require (
 	github.com/aws/smithy-go v1.22.2 // indirect
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
 	github.com/go-webauthn/x v0.1.21 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/google/go-tpm v0.9.3 // indirect

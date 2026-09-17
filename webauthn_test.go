@@ -322,7 +322,7 @@ func (ms *MfaSuite) Test_FinishRegistration() {
 			},
 		},
 		{
-			name:    "all good - first u2f key",
+			name:    "all good - first key",
 			httpReq: *reqWithBody1,
 			wantBodyContains: []string{
 				`{"key_handle_hash":"ZYDzzEkj-JY80I7IviiMswRyYvTEh5DDXlhssMFs6Kw"}`,
@@ -337,7 +337,7 @@ func (ms *MfaSuite) Test_FinishRegistration() {
 			wantCredsCount: 1,
 		},
 		{
-			name:    "all good - second u2f key",
+			name:    "all good - second key",
 			httpReq: *reqWithBody2,
 			wantBodyContains: []string{
 				`{"key_handle_hash":"ANyGhfjNgKwiap6UuhmYlZr_dao7x8SRFwU_IR7j2Pc"}`,
@@ -809,12 +809,6 @@ func (ms *MfaSuite) Test_DeleteCredential() {
 		wantCredIDs     [][]byte
 		dontWantCredID  []byte
 	}{
-		{
-			name:       "legacy u2f credential",
-			user:       testUser0,
-			credID:     LegacyU2FCredID,
-			wantStatus: http.StatusNoContent,
-		},
 		{
 			name:            "noID",
 			user:            testUser1,

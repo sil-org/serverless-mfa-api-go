@@ -177,8 +177,7 @@ func (a *App) DeleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteCredential is the handler for the "DELETE /webauthn/credential/{credID}" endpoint. It removes a single
-// passkey identified by "credID", which is the key_handle_hash returned by the FinishRegistration endpoint, or "u2f"
-// if it is a legacy U2F credential, in which case that user is saved with all of its legacy u2f fields blanked out.
+// passkey identified by "credID", which is the key_handle_hash returned by the FinishRegistration endpoint.
 func (a *App) DeleteCredential(w http.ResponseWriter, r *http.Request) {
 	const deleteCredential = "DeleteCredential"
 

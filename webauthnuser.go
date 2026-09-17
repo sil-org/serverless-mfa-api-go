@@ -20,26 +20,13 @@ const UserContextKey = "user"
 // WebAuthnTablePK is the primary key in the WebAuthn DynamoDB table
 const WebAuthnTablePK = "uuid"
 
-// LegacyU2FCredID is a special case credential ID for legacy U2F support. At most one credential for each user may
-// have this in its ID field.
-const LegacyU2FCredID = "u2f"
-
 // WebauthnUser holds user data from DynamoDB, in both encrypted and unencrypted form. It also holds a Webauthn client
 // and Webauthn API data.
 type WebauthnUser struct {
-	// Shared fields between U2F and WebAuthn
 	ID          string   `dynamodbav:"uuid" json:"uuid"`
 	ApiKeyValue string   `dynamodbav:"apiKey" json:"apiKey"`
 	ApiKey      ApiKey   `dynamodbav:"-" json:"-"`
 	Store       *Storage `dynamodbav:"-" json:"-"`
-
-	// U2F fields
-	AppId              string `dynamodbav:"-" json:"-"`
-	EncryptedAppId     string `dynamodbav:"encryptedAppId" json:"encryptedAppId,omitempty"`
-	KeyHandle          string `dynamodbav:"-" json:"-"`
-	EncryptedKeyHandle string `dynamodbav:"encryptedKeyHandle" json:"encryptedKeyHandle,omitempty"`
-	PublicKey          string `dynamodbav:"-" json:"-"`
-	EncryptedPublicKey string `dynamodbav:"encryptedPublicKey" json:"encryptedPublicKey,omitempty"`
 
 	// WebAuthn fields
 	SessionData          webauthn.SessionData `dynamodbav:"-" json:"-"`
@@ -77,17 +64,6 @@ func NewWebauthnUser(apiConfig WebauthnMeta, storage *Storage, apiKey ApiKey, we
 		slog.Error("failed to load user", "error", err)
 	}
 	return u
-}
-
-// RemoveU2F clears U2F fields in the user struct. To be used when a user has requested removal of their legacy U2F key.
-// Should be followed by a database store operation.
-func (u *WebauthnUser) RemoveU2F() {
-	u.AppId = ""
-	u.EncryptedAppId = ""
-	u.KeyHandle = ""
-	u.EncryptedKeyHandle = ""
-	u.PublicKey = ""
-	u.EncryptedPublicKey = ""
 }
 
 // unsetSessionData clears the encrypted session data from a user and stores the updated record in the database.
@@ -142,23 +118,13 @@ func (u *WebauthnUser) saveNewCredential(credential webauthn.Credential) error {
 }
 
 // DeleteCredential expects a hashed-encoded credential id. It finds a matching credential for that user and saves the
-// user without that credential included. Alternatively, if the given credential id indicates that a legacy U2F key
-// should be removed (i.e. by matching the string "u2f") then that user is saved with all of its legacy u2f fields
-// blanked out.
+// user without that credential included.
 // CAUTION: user data is refreshed from the database by this function. Any unsaved data will be lost.
 func (u *WebauthnUser) DeleteCredential(credIDHash string) (int, error) {
 	// load to be sure working with the latest data
 	err := u.Load()
 	if err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("error in DeleteCredential: %w", err)
-	}
-
-	if credIDHash == LegacyU2FCredID {
-		u.RemoveU2F()
-		if err := u.Store.Store(envConfig.WebauthnTable, u); err != nil {
-			return http.StatusInternalServerError, fmt.Errorf("error in DeleteCredential deleting legacy u2f: %w", err)
-		}
-		return http.StatusNoContent, nil
 	}
 
 	if len(u.Credentials) == 0 {
@@ -322,9 +288,6 @@ func (u *WebauthnUser) FinishRegistration(r *http.Request) (string, error) {
 // CredentialAssertion data to pass back to the client. User session data is saved in the database.
 func (u *WebauthnUser) BeginLogin() (*protocol.CredentialAssertion, error) {
 	extensions := protocol.AuthenticationExtensions{}
-	if u.AppId != "" {
-		extensions["appid"] = u.AppId
-	}
 
 	options, sessionData, err := u.WebAuthnClient.BeginLogin(u, webauthn.WithAssertionExtensions(extensions), webauthn.WithUserVerification(protocol.VerificationDiscouraged))
 	if err != nil {
@@ -358,17 +321,6 @@ func (u *WebauthnUser) FinishLogin(r *http.Request) (*webauthn.Credential, error
 	if err != nil {
 		logProtocolError(fmt.Sprintf("failed to parse credential request response body: %s", body), err)
 		return &webauthn.Credential{}, fmt.Errorf("failed to parse credential request response body: %w", err)
-	}
-
-	// If user has registered U2F creds, check if RPIDHash is actually hash of AppId
-	// if so, replace authenticator data RPIDHash with a hash of the RPID for validation
-	if u.AppId != "" {
-		appIdHash := sha256.Sum256([]byte(u.AppId))
-		rpIdHash := sha256.Sum256([]byte(u.WebAuthnClient.Config.RPID))
-
-		if fmt.Sprintf("%x", parsedResponse.Response.AuthenticatorData.RPIDHash) == fmt.Sprintf("%x", appIdHash) {
-			parsedResponse.Response.AuthenticatorData.RPIDHash = rpIdHash[:]
-		}
 	}
 
 	credential, err := u.WebAuthnClient.ValidateLogin(u, u.SessionData, parsedResponse)
