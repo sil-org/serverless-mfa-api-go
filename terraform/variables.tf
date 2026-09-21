@@ -12,6 +12,7 @@ variable "app_env" {
 variable "aws_access_key_id" {
   type        = string
   description = "Access Key ID for user with permissions to create resources for CDK"
+  default     = null
 }
 
 variable "aws_region" {
@@ -27,6 +28,7 @@ variable "aws_region_secondary" {
 variable "aws_secret_access_key" {
   type        = string
   description = "Secret access Key ID for user with permissions to create resources for CDK"
+  default     = null
 }
 
 variable "cloudflare_token" {
