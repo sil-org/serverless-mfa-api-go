@@ -9,10 +9,12 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/getsentry/sentry-go"
 	"github.com/kelseyhightower/envconfig"
 
@@ -22,8 +24,10 @@ import (
 
 var envConfig mfa.EnvConfig
 
+var errorLog = &errorRecorder{Handler: slog.NewJSONHandler(os.Stdout, nil)}
+
 func main() {
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	slog.SetDefault(slog.New(errorLog))
 
 	err := envconfig.Process("", &envConfig)
 	if err != nil {
@@ -38,6 +42,9 @@ func main() {
 }
 
 func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	// Lambda reuses the process between invocations, so drop any record left by the previous one
+	errorLog.last.Store(nil)
+
 	r := httpRequestFromProxyRequest(ctx, req)
 	w := newLambdaResponseWriter()
 
@@ -52,10 +59,7 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 	}
 
 	if w.Status == http.StatusInternalServerError && envConfig.SentryDSN != "" {
-		sentry.WithScope(func(scope *sentry.Scope) {
-			scope.SetLevel(sentry.LevelError)
-			sentry.CaptureMessage(string(w.Body))
-		})
+		captureServerError(ctx, r, w.Body)
 		sentry.Flush(2 * time.Second)
 	}
 
@@ -98,4 +102,39 @@ func sentryInit() {
 	}); err != nil {
 		slog.Error(fmt.Sprintf("Sentry initialization failed: %v", err))
 	}
+}
+
+// captureServerError does not attach the request (scope.SetRequest) because its headers include the API secret.
+func captureServerError(ctx context.Context, r *http.Request, body []byte) {
+	sentry.WithScope(func(scope *sentry.Scope) {
+		scope.SetLevel(sentry.LevelError)
+		scope.SetTag("route", r.Pattern)
+		if lc, ok := lambdacontext.FromContext(ctx); ok {
+			scope.SetTag("aws_request_id", lc.AwsRequestID)
+		}
+
+		message := string(body)
+		if record := errorLog.last.Load(); record != nil {
+			message = record.Message
+			record.Attrs(func(attr slog.Attr) bool {
+				scope.SetExtra(attr.Key, attr.Value.String())
+				return true
+			})
+		}
+		sentry.CaptureMessage(message)
+	})
+}
+
+// errorRecorder keeps the latest error-level log record, which holds the real cause behind a generic 500 response.
+type errorRecorder struct {
+	slog.Handler
+	last atomic.Pointer[slog.Record]
+}
+
+func (e *errorRecorder) Handle(ctx context.Context, record slog.Record) error {
+	if record.Level >= slog.LevelError {
+		clone := record.Clone()
+		e.last.Store(&clone)
+	}
+	return e.Handler.Handle(ctx, record)
 }
