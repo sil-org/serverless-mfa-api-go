@@ -22,12 +22,25 @@ import (
 	"github.com/sil-org/serverless-mfa-api-go/router"
 )
 
+// errorRecorder keeps the latest error-level log record, which holds the real cause behind a generic 500 response.
+type errorRecorder struct {
+	slog.Handler
+	last atomic.Pointer[slog.Record]
+}
+
+func (e *errorRecorder) Handle(ctx context.Context, record slog.Record) error {
+	if record.Level >= slog.LevelError {
+		clone := record.Clone()
+		e.last.Store(&clone)
+	}
+	return e.Handler.Handle(ctx, record)
+}
+
 var envConfig mfa.EnvConfig
 
-var errorLog = &errorRecorder{Handler: slog.NewJSONHandler(os.Stdout, nil)}
-
 func main() {
-	slog.SetDefault(slog.New(errorLog))
+	recorder := &errorRecorder{Handler: slog.NewJSONHandler(os.Stdout, nil)}
+	slog.SetDefault(slog.New(recorder))
 
 	err := envconfig.Process("", &envConfig)
 	if err != nil {
@@ -38,36 +51,38 @@ func main() {
 
 	sentryInit()
 
-	lambda.Start(handler)
+	lambda.Start(newHandler(recorder))
 }
 
-func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	// Lambda reuses the process between invocations, so drop any record left by the previous one
-	errorLog.last.Store(nil)
+func newHandler(recorder *errorRecorder) func(context.Context, events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	return func(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+		// Lambda reuses the process between invocations, so drop any record left by the previous one
+		recorder.last.Store(nil)
 
-	r := httpRequestFromProxyRequest(ctx, req)
-	w := newLambdaResponseWriter()
+		r := httpRequestFromProxyRequest(ctx, req)
+		w := newLambdaResponseWriter()
 
-	app := mfa.NewApp(envConfig)
-	mux := router.NewMux(app)
+		app := mfa.NewApp(envConfig)
+		mux := router.NewMux(app)
 
-	mux.ServeHTTP(w, r)
+		mux.ServeHTTP(w, r)
 
-	headers := map[string]string{}
-	for k, v := range w.Header() {
-		headers[k] = v[0]
+		headers := map[string]string{}
+		for k, v := range w.Header() {
+			headers[k] = v[0]
+		}
+
+		if w.Status == http.StatusInternalServerError && envConfig.SentryDSN != "" {
+			captureServerError(ctx, r, w.Body, recorder.last.Load())
+			sentry.Flush(2 * time.Second)
+		}
+
+		return events.APIGatewayProxyResponse{
+			StatusCode: w.Status,
+			Headers:    headers,
+			Body:       string(w.Body),
+		}, nil
 	}
-
-	if w.Status == http.StatusInternalServerError && envConfig.SentryDSN != "" {
-		captureServerError(ctx, r, w.Body)
-		sentry.Flush(2 * time.Second)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: w.Status,
-		Headers:    headers,
-		Body:       string(w.Body),
-	}, nil
 }
 
 func httpRequestFromProxyRequest(ctx context.Context, req events.APIGatewayProxyRequest) *http.Request {
@@ -104,8 +119,7 @@ func sentryInit() {
 	}
 }
 
-// captureServerError does not attach the request (scope.SetRequest) because its headers include the API secret.
-func captureServerError(ctx context.Context, r *http.Request, body []byte) {
+func captureServerError(ctx context.Context, r *http.Request, body []byte, record *slog.Record) {
 	sentry.WithScope(func(scope *sentry.Scope) {
 		scope.SetLevel(sentry.LevelError)
 		scope.SetTag("route", r.Pattern)
@@ -113,8 +127,14 @@ func captureServerError(ctx context.Context, r *http.Request, body []byte) {
 			scope.SetTag("aws_request_id", lc.AwsRequestID)
 		}
 
+		// sentry-go only removes headers on its own fixed list, which doesn't include these two
+		sanitized := r.Clone(ctx)
+		sanitized.Header.Del(mfa.HeaderAPISecret)
+		sanitized.Header.Del(mfa.HeaderAPIKey)
+		scope.SetRequest(sanitized)
+
 		message := string(body)
-		if record := errorLog.last.Load(); record != nil {
+		if record != nil {
 			message = record.Message
 			record.Attrs(func(attr slog.Attr) bool {
 				scope.SetExtra(attr.Key, attr.Value.String())
@@ -123,18 +143,4 @@ func captureServerError(ctx context.Context, r *http.Request, body []byte) {
 		}
 		sentry.CaptureMessage(message)
 	})
-}
-
-// errorRecorder keeps the latest error-level log record, which holds the real cause behind a generic 500 response.
-type errorRecorder struct {
-	slog.Handler
-	last atomic.Pointer[slog.Record]
-}
-
-func (e *errorRecorder) Handle(ctx context.Context, record slog.Record) error {
-	if record.Level >= slog.LevelError {
-		clone := record.Clone()
-		e.last.Store(&clone)
-	}
-	return e.Handler.Handle(ctx, record)
 }
