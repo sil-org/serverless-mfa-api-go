@@ -367,8 +367,7 @@ func hashAndEncodeKeyHandle(id []byte) string {
 // logProtocolError logs an error and includes additional detail if the given error is an Error from
 // go-webauthn/webauthn/protocol
 func logProtocolError(msg string, err error) {
-	var protocolError *protocol.Error
-	if errors.As(err, &protocolError) {
+	if protocolError, ok := errors.AsType[*protocol.Error](err); ok {
 		slog.Error(msg, "ProtocolError", protocolError.Details, "devInfo", protocolError.DevInfo)
 	} else {
 		slog.Error(msg, "error", err)

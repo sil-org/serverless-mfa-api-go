@@ -161,12 +161,10 @@ func GetAuthDataAndPrivateKey(rpID, keyHandle string) (authDataStr string, authD
 	publicKey := privateKey.PublicKey
 
 	pubKeyData := webauthncose.EC2PublicKeyData{
-		PublicKeyData: webauthncose.PublicKeyData{
-			Algorithm: int64(webauthncose.AlgES256),
-			KeyType:   int64(webauthncose.EllipticKey),
-		},
-		XCoord: publicKey.X.Bytes(),
-		YCoord: publicKey.Y.Bytes(),
+		Algorithm: int64(webauthncose.AlgES256),
+		KeyType:   int64(webauthncose.EllipticKey),
+		XCoord:    publicKey.X.Bytes(),
+		YCoord:    publicKey.Y.Bytes(),
 	}
 
 	// Get the CBOR-encoded representation of the OKPPublicKeyData
