@@ -101,12 +101,11 @@ func main() {
 			"itse_app_customer": jsii.String("shared"),
 			"itse_app_env":      jsii.String(env),
 		},
-	}
 
-	props.Env = &awscdk.Environment{
-		Account: jsii.String(os.Getenv("AWS_ACCOUNT_ID")),
-		Region:  jsii.String(os.Getenv("AWS_REGION")),
-	}
+		Env: &awscdk.Environment{
+			Account: jsii.String(os.Getenv("AWS_ACCOUNT_ID")),
+			Region:  jsii.String(os.Getenv("AWS_REGION")),
+		}}
 
 	NewCdkStack(app, "twosv-api-"+env, &CdkStackProps{props})
 
