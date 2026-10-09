@@ -1,6 +1,8 @@
 module github.com/sil-org/serverless-mfa-api-go
 
-go 1.26.6
+go 1.27
+
+toolchain go1.27.2
 
 require (
 	github.com/aws/aws-lambda-go v1.49.0
@@ -14,7 +16,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/pquerna/otp v1.5.0
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/crypto v0.45.0
+	golang.org/x/crypto v0.57.0
 )
 
 require (
@@ -46,7 +48,7 @@ require (
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260908163034-4bcc4b2ee518 // indirect
-	golang.org/x/text v0.39.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/tools v0.50.0 // indirect
 	golang.org/x/vuln v1.8.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
